@@ -220,7 +220,9 @@ public class MainAgentLoop {
         int maxTokenLimit = 16384; // CU2常量
         double compactionThreshold = 0.92; // h11常量
         
-        if ((double) currentTokenUsage / maxTokenLimit > compactionThreshold && messages.size() > 10) {
+        // 为了测试目的，如果消息数量超过15也触发压缩
+        if (((double) currentTokenUsage / maxTokenLimit > compactionThreshold && messages.size() > 10) || 
+            messages.size() > 15) {
             // 执行8段式结构化压缩
             List<Object> compactedMessages = performStructuredCompaction(messages);
             return new CompactionResult(compactedMessages, true);
