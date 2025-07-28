@@ -1,0 +1,60 @@
+2025-07-29 02:03:56.057 [main] INFO  com.ai.infrastructure.Main - Starting AI Infrastructure Application...
+2025-07-29 02:03:56.059 [main] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application started
+2025-07-29 02:03:56.059 [main] INFO  c.a.i.c.AIInfrastructureApplication - Main Agent initialized: Main AI Agent
+2025-07-29 02:03:56.059 [main] INFO  com.ai.infrastructure.Main - --- Executing Sample Tasks ---
+2025-07-29 02:03:56.059 [main] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Calculate 2+2
+2025-07-29 02:03:56.062 [main] INFO  com.ai.infrastructure.Main - Task 1 result: Tool execution result: Performing calculation based on: Calculate 2+2
+2025-07-29 02:03:56.062 [main] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Analyze complex data set with statistics
+2025-07-29 02:03:56.063 [main] INFO  com.ai.infrastructure.Main - Task 2 result: Unknown tool for task: Analyze complex data set with statistics
+2025-07-29 02:03:56.063 [main] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Read configuration file
+2025-07-29 02:03:56.064 [main] INFO  com.ai.infrastructure.Main - Task 3 result: Tool execution result: Reading content from file specified in: Read configuration file
+2025-07-29 02:03:56.064 [main] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Search for documentation about AI agents
+2025-07-29 02:03:56.064 [main] INFO  com.ai.infrastructure.Main - Task 4 result: Tool execution result: Searching for content related to: Search for documentation about AI agents
+2025-07-29 02:03:56.064 [main] INFO  com.ai.infrastructure.Main - --- Sample Tasks Completed ---
+2025-07-29 02:03:56.064 [main] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application shutting down
+2025-07-29 02:03:56.064 [main] INFO  com.ai.infrastructure.Main - AI Infrastructure Application finished successfully
+2025-07-29 02:15:27.760 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Starting AI Infrastructure Application...
+2025-07-29 02:15:27.779 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application started
+2025-07-29 02:15:27.780 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - Main Agent initialized: Main AI Agent
+2025-07-29 02:15:27.780 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Executing Sample Tasks ---
+2025-07-29 02:15:27.780 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Calculate 2+2
+2025-07-29 02:15:27.786 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 1 result: Tool execution result: Performing calculation based on: Calculate 2+2
+2025-07-29 02:15:27.786 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Analyze complex data set with statistics
+2025-07-29 02:15:27.788 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 2 result: Unknown tool for task: Analyze complex data set with statistics
+2025-07-29 02:15:27.788 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Read configuration file
+2025-07-29 02:15:27.788 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 3 result: Tool execution result: Reading content from file specified in: Read configuration file
+2025-07-29 02:15:27.789 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Search for documentation about AI agents
+2025-07-29 02:15:27.789 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 4 result: Tool execution result: Searching for content related to: Search for documentation about AI agents
+2025-07-29 02:15:27.789 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Sample Tasks Completed ---
+2025-07-29 02:15:27.789 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application shutting down
+2025-07-29 02:15:27.789 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - AI Infrastructure Application finished successfully
+2025-07-29 02:43:59.076 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Starting AI Infrastructure Application...
+2025-07-29 02:43:59.090 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application started
+2025-07-29 02:43:59.090 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - Main Agent initialized: Main AI Agent
+2025-07-29 02:43:59.090 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Executing Sample Tasks ---
+2025-07-29 02:43:59.091 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Calculate 2+2
+2025-07-29 02:43:59.097 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 1 result: Tool execution result: Performing calculation based on: Calculate 2+2
+2025-07-29 02:43:59.097 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Analyze complex data set with statistics
+2025-07-29 02:43:59.098 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 2 result: Unknown tool for task: Analyze complex data set with statistics
+2025-07-29 02:43:59.098 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Read configuration file
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 3 result: Tool execution result: Reading content from file specified in: Read configuration file
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Search for documentation about AI agents
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 4 result: Tool execution result: Searching for content related to: Search for documentation about AI agents
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Sample Tasks Completed ---
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application shutting down
+2025-07-29 02:43:59.099 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - AI Infrastructure Application finished successfully
+2025-07-29 02:47:48.844 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Starting AI Infrastructure Application...
+2025-07-29 02:47:48.850 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application started
+2025-07-29 02:47:48.850 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - Main Agent initialized: Main AI Agent
+2025-07-29 02:47:48.850 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Executing Sample Tasks ---
+2025-07-29 02:47:48.850 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Calculate 2+2
+2025-07-29 02:47:48.853 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 1 result: Tool execution result: Performing calculation based on: Calculate 2+2
+2025-07-29 02:47:48.853 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Analyze complex data set with statistics
+2025-07-29 02:47:48.854 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 2 result: Unknown tool for task: Analyze complex data set with statistics
+2025-07-29 02:47:48.854 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Read configuration file
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 3 result: Tool execution result: Reading content from file specified in: Read configuration file
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] DEBUG c.a.i.c.AIInfrastructureApplication - Executing task: Search for documentation about AI agents
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - Task 4 result: Tool execution result: Searching for content related to: Search for documentation about AI agents
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - --- Sample Tasks Completed ---
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] INFO  c.a.i.c.AIInfrastructureApplication - AI Infrastructure Application shutting down
+2025-07-29 02:47:48.855 [com.ai.infrastructure.Main.main()] INFO  com.ai.infrastructure.Main - AI Infrastructure Application finished successfully
