@@ -68,7 +68,9 @@
       "Bash(grep:*)",
       "Bash(sed:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(mvn clean compile test:*)",
+      "Bash(mvn clean test:*)"
     ],
     "deny": []
   }

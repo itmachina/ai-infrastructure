@@ -22,7 +22,7 @@ import java.util.ArrayList;
  */
 public class OpenAIModelClient {
     private static final String API_URL = "https://apis.iflow.cn/v1/chat/completions";
-    private static final String DEFAULT_MODEL = "Qwen3-235B-A22B-Thinking-2507";
+    private static final String DEFAULT_MODEL = "Qwen3-235B-A22B-Instruct";
     private static final int DEFAULT_MAX_TOKENS = 1000;
     private static final double DEFAULT_TEMPERATURE = 0.7;
     

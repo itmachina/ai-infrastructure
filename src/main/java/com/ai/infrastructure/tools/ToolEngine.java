@@ -33,6 +33,7 @@ public class ToolEngine {
         registeredTools.put("write", new WriteToolExecutor());
         registeredTools.put("search", new SearchToolExecutor());
         registeredTools.put("calculate", new CalculateToolExecutor());
+        registeredTools.put("web_search", new WebSearchToolExecutor());
     }
     
     /**
@@ -99,6 +100,8 @@ public class ToolEngine {
             return "search";
         } else if (task.startsWith("calculate ") || task.startsWith("计算 ")) {
             return "calculate";
+        } else if (task.startsWith("web_search ") || task.startsWith("网页搜索 ")) {
+            return "web_search";
         }
         
         // 检查是否包含工具关键词
@@ -110,8 +113,10 @@ public class ToolEngine {
             return "search";
         } else if (task.contains("calculate") || task.contains("计算") || task.contains("math")) {
             return "calculate";
+        } else if (task.contains("web search") || task.contains("网页搜索") || task.contains("internet search")) {
+            return "web_search";
         }
-        
+
         return null;
     }
     

@@ -12,6 +12,9 @@
 4. **内存管理机制** - 三层记忆架构（短期/中期/长期）
 5. **工具执行引擎** - 6阶段执行流程
 6. **安全防护机制** - 6层安全防护架构
+7. **OpenAI风格大模型集成** - 支持心流开放平台的OpenAI兼容API接口
+8. **智能任务分发机制** - 基于大模型的智能决策能力
+9. **持续执行和对话管理** - 支持多轮对话和任务的连续执行
 
 ## 核心组件
 
@@ -28,144 +31,194 @@
 - `RealtimeSteeringSystem` - 实时Steering系统的完整集成
 
 ### 3. 任务调度
-- `TaskScheduler` - 任务调度器，支持最大10个并发任务
-- `ConcurrentExecutor` - 并发执行器，实现Claude Code的UH1并发调度机制
+- `TaskScheduler` - 任务调度器，支持并发控制和任务队列管理
+- `ConcurrentExecutor` - 并发执行器，支持任务的并发执行
 
 ### 4. 内存管理
 - `MemoryManager` - 内存管理器，实现三层记忆架构
-- `MemoryItem` - 内存项
-- `CompressedMemory` - 压缩内存
+- `MemoryItem` - 内存项，表示单个记忆单元
+- `CompressedMemory` - 压缩内存，实现对话历史的智能压缩
 
-### 5. 工具执行
+### 5. 工具引擎
 - `ToolEngine` - 工具引擎，实现6阶段执行流程
 - `ToolExecutor` - 工具执行器接口
-- 各种具体工具执行器实现
+- `ReadToolExecutor` - 读取工具执行器
+- `WriteToolExecutor` - 写入工具执行器
+- `SearchToolExecutor` - 搜索工具执行器
+- `CalculateToolExecutor` - 计算工具执行器
+- `WebSearchToolExecutor` - 网页搜索工具执行器
+- `OpenAIStyleModelToolExecutor` - OpenAI风格大模型工具执行器
 
-### 6. 安全防护
-- `SecurityManager` - 安全管理器，实现6层安全防护
+### 6. 安全管理
+- `SecurityManager` - 安全管理器，实现6层安全防护架构
 
-## 架构特点
+### 7. 对话和持续执行
+- `ConversationManager` - 对话管理器，管理对话历史和消息构建
+- `ContinuousExecutionManager` - 持续执行管理器，管理任务的连续执行
 
-### 分层多Agent架构
+### 8. 大模型客户端
+- `OpenAIModelClient` - OpenAI风格大模型客户端，独立封装的心流开放平台API调用客户端
+
+## 功能特性
+
+### 1. OpenAI风格大模型集成
+- 支持心流开放平台的OpenAI兼容API接口
+- 集成`Qwen3-235B-A22B-Thinking-2507`模型
+- 完整的API调用流程实现
+
+### 2. 智能任务分发机制
+- 基于大模型的智能决策能力
+- 自动选择最佳处理方式：
+  - DIRECT: 直接回答简单问题
+  - TOOL: 调用工具执行具体操作
+  - SUBAGENT: 创建子Agent处理复杂任务
+
+### 3. 丰富的工具集
+- **read**: 读取文件内容
+- **write**: 写入文件内容
+- **search**: 本地搜索
+- **web_search**: 网页搜索（使用百度搜索）
+- **calculate**: 数学计算
+
+### 3. 持续执行和对话管理
+- 支持多轮对话和任务的连续执行
+- 对话历史管理
+- 执行步骤控制和超时机制
+
+### 4. 安全特性
+- 完整的输入验证和安全检查
+- API密钥安全管理和保护
+- 命令注入检测和防护
+
+## 系统架构
+
 ```
-主Agent (协调)
-    │
-    ├── 子Agent 1 (执行专项任务)
-    ├── 子Agent 2 (执行专项任务)
-    └── 子Agent N (执行专项任务)
-```
-
-### 实时Steering机制架构
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   stdin监听      │───▶│  消息解析器      │───▶│  异步消息队列    │
-│  (实时输入)      │    │   (g2A)         │    │    (h2A)        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  AbortController │◀───│   流式处理      │◀───│   Agent循环     │
-│   (中断控制)     │    │   (kq5)         │    │    (nO)         │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-### 三层记忆架构
-1. **短期记忆** - 实时消息数组
-2. **中期记忆** - 基于8段式结构化压缩
-3. **长期记忆** - 持久化存储
-
-### 6阶段工具执行流程
-1. 工具发现与验证
-2. 输入验证
-3. 权限检查
-4. 取消检查
-5. 工具执行
-6. 结果格式化与清理
-
-### 6层安全防护
-1. 输入验证层
-2. 权限控制层
-3. 沙箱隔离层
-4. 执行监控层
-5. 错误恢复层
-6. 审计记录层
-
-## 核心技术实现
-
-### 1. 异步消息队列 (h2A类实现)
-```java
-public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMessage<T>>> {
-    // 实现AsyncIterator接口
-    // 支持非阻塞读取和实时消息入队
-    // 完整的状态管理和错误处理
-}
-```
-
-### 2. 消息解析器 (g2A类实现)
-```java
-public class StreamingMessageParser implements AutoCloseable {
-    // 异步生成器实现流式处理
-    // 支持JSON格式消息解析和严格类型验证
-    // 错误处理和恢复机制
-}
+AIInfrastructureApplication (应用入口)
+├── MainAgent (主Agent)
+│   ├── ContinuousExecutionManager (持续执行管理器)
+│   │   ├── ConversationManager (对话管理器)
+│   │   └── TaskScheduler (任务调度器)
+│   ├── ToolEngine (工具引擎)
+│   ├── MemoryManager (内存管理器)
+│   └── SecurityManager (安全管理器)
+└── SubAgent (子Agent)
 ```
 
-### 3. 流式处理引擎 (kq5函数实现)
-```java
-public class StreamingProcessor implements AutoCloseable {
-    // 并发执行协调机制
-    // 命令队列管理和状态同步
-    // 流式输出和中断处理
-}
-```
+## 快速开始
 
-### 4. Agent主循环 (nO函数实现)
-```java
-public class MainAgentLoop {
-    // Async Generator实现
-    // 消息压缩和上下文管理
-    // 模型降级和错误恢复
-}
-```
-
-## 运行项目
-
+### 编译项目
 ```bash
-# 使用Maven编译项目
 mvn compile
-
-# 运行测试
-mvn test
-
-# 打包项目
-mvn package
-
-# 运行主应用
-mvn exec:java -Dexec.mainClass="com.ai.infrastructure.Main"
-
-# 运行实时Steering演示
-mvn exec:java -Dexec.mainClass="com.ai.infrastructure.RealtimeSteeringDemo"
 ```
 
-## 技术栈
+### 运行测试
+```bash
+mvn test
+```
 
-- Java 17
-- CompletableFuture (异步编程)
-- 并发工具 (ExecutorService, Semaphore)
-- Gson (JSON处理)
-- JUnit 5 (测试框架)
-- SLF4J/Logback (日志框架)
+### 打包项目
+```bash
+mvn package
+```
 
-## 扩展性
+### 运行主应用
+```bash
+# 不带API密钥运行（使用回退机制）
+mvn exec:java
 
-该架构设计具有良好的扩展性，可以通过以下方式扩展：
+# 带API密钥运行（启用大模型功能）
+mvn exec:java -Dexec.args="YOUR_API_KEY_HERE"
 
-1. 添加新的工具执行器
-2. 实现新的Agent类型
-3. 扩展内存管理策略
-4. 增强安全防护机制
-5. 实现新的消息解析格式
-6. 添加更多的并发调度策略
+# 通过环境变量设置API密钥
+export OPENAI_MODEL_API_KEY="your-api-key-here"
+mvn exec:java
+```
+
+### 运行OpenAI模型使用示例
+```bash
+# 不带API密钥运行（使用回退机制）
+mvn exec:java -Dexec.mainClass="com.ai.infrastructure.OpenAIModelUsageExample"
+
+# 带API密钥运行（启用大模型功能）
+mvn exec:java -Dexec.mainClass="com.ai.infrastructure.OpenAIModelUsageExample" -Dexec.args="YOUR_API_KEY_HERE"
+```
+
+### 运行演示示例
+```bash
+mvn exec:java@run-demo -Dexec.args="YOUR_API_KEY_HERE"
+```
+
+## 配置选项
+
+### API密钥配置
+1. 命令行参数方式：`mvn exec:java -Dexec.args="YOUR_API_KEY_HERE"`
+2. 环境变量方式：`export OPENAI_MODEL_API_KEY="your-api-key-here"`
+
+### 网页搜索工具配置
+web_search工具使用百度搜索，无需额外配置API密钥。
+
+### 模型参数配置
+- 默认模型：`Qwen3-235B-A22B-Thinking-2507`
+- 默认温度：`0.7`
+- 默认最大token数：`1000`
+
+## 使用示例
+
+### 基本使用
+```java
+AIInfrastructureApplication application = new AIInfrastructureApplication();
+application.setOpenAIModelApiKey("YOUR_API_KEY_HERE");
+
+// 执行任务
+CompletableFuture<String> result = application.executeTask("分析机器学习的发展趋势");
+String response = result.join();
+```
+
+### 使用网页搜索工具
+```java
+AIInfrastructureApplication application = new AIInfrastructureApplication();
+application.setOpenAIModelApiKey("YOUR_API_KEY_HERE");
+
+// 执行网页搜索任务
+CompletableFuture<String> result = application.executeTask("web_search 2025年最新的人工智能技术发展趋势");
+String response = result.join();
+```
+
+### 交互式模式
+```bash
+java -jar ai-infrastructure.jar YOUR_API_KEY_HERE
+# 系统将启动交互式模式，支持多轮对话和持续执行
+```
+
+## 文档
+
+- [Agent核心模型集成总结](docs/agent_core_model_integration_summary.md)
+- [OpenAI模型集成详细文档](docs/openai_model_integration.md)
+- [智能任务分发机制](docs/intelligent_task_dispatch.md)
+- [持续执行和对话管理](docs/continuous_execution_and_conversation_management.md)
+
+## 依赖项
+
+- Java 17+
+- Gson 2.10.1 (JSON处理)
+- SLF4J 2.0.6 (日志记录)
+- Logback 1.4.5 (日志实现)
+- JUnit 5.9.2 (测试框架)
+- Mockito 5.1.1 (测试框架)
+
+## 未来改进方向
+
+1. 实现流式响应处理
+2. 添加智能重试逻辑
+3. 实现响应缓存提高性能
+4. 添加API调用成本跟踪
+5. 支持多模型端点负载均衡
+6. 扩展内存管理策略
+7. 增强安全防护机制
+8. 实现新的消息解析格式
+9. 添加更多的并发调度策略
+10. 更智能的对话管理
+11. 任务状态持久化
 
 ## 安全特性
 
@@ -175,6 +228,8 @@ mvn exec:java -Dexec.mainClass="com.ai.infrastructure.RealtimeSteeringDemo"
 4. **输入验证和过滤** - 严格的输入验证和危险字符过滤
 5. **权限控制** - 细粒度的工具权限验证和访问控制
 6. **错误隔离** - 完整的错误处理和隔离机制
+7. **API密钥保护** - 安全的API密钥管理和存储
+8. **命令注入防护** - 基于LLM的命令注入检测
 
 ## 性能优化
 
@@ -182,3 +237,4 @@ mvn exec:java -Dexec.mainClass="com.ai.infrastructure.RealtimeSteeringDemo"
 2. **并发执行优化** - 基于工具特性的并发安全评估
 3. **内存管理优化** - 三层记忆架构和智能压缩算法
 4. **非阻塞设计** - 完整的异步非阻塞消息处理机制
+5. **持续执行控制** - 执行步骤限制和超时控制

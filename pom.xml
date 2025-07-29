@@ -145,6 +145,26 @@
                 <configuration>
                     <mainClass>com.ai.infrastructure.Main</mainClass>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>run-main</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.ai.infrastructure.Main</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>run-demo</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.ai.infrastructure.example.ContinuousExecutionDemo</mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Maven Assembly Plugin for distribution -->

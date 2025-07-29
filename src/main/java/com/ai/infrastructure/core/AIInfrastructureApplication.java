@@ -1,7 +1,7 @@
 package com.ai.infrastructure.core;
 
 import com.ai.infrastructure.agent.MainAgent;
-import com.ai.infrastructure.agent.SubAgent;
+import com.ai.infrastructure.model.OpenAIModelClient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +36,15 @@ public class AIInfrastructureApplication {
     public CompletableFuture<String> executeTask(String task) {
         logger.debug("Executing task: " + task);
         return mainAgent.executeTask(task);
+    }
+    
+    /**
+     * 设置OpenAI模型API密钥
+     * @param apiKey API密钥
+     */
+    public void setOpenAIModelApiKey(String apiKey) {
+        mainAgent.setOpenAIModelApiKey(apiKey);
+        logger.info("OpenAI model API key set");
     }
     
     /**
