@@ -6,6 +6,7 @@ import com.ai.infrastructure.tools.ToolEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +22,20 @@ public class ContinuousExecutionManager {
     private OpenAIModelClient openAIModelClient;
     private AtomicInteger executionStep;
     private AtomicBoolean isExecuting;
+    private Scanner scanner; // 用于从命令行读取用户输入
     private static final int MAX_EXECUTION_STEPS = 10; // 最大执行步骤数
+    
+    // 需要用户输入的关键词列表（中英文）
+    private static final String[] USER_INPUT_KEYWORDS = {
+        "请提供", "需要您", "请输入", "请告诉我", "请说明", "请上传", "请明确", "请确认",
+        "具体信息", "详细信息", "更多信息", "补充信息",
+        "项目需求", "具体要求", "详细要求", "需求说明",
+        "文件内容", "代码内容", "文本内容",
+        "please provide", "need you to", "please input", "please tell me", "please specify", "please upload",
+        "specific information", "detailed information", "more information", "additional information",
+        "project requirements", "specific requirements", "detailed requirements", "requirements specification",
+        "file content", "code content", "text content"
+    };
     
     public ContinuousExecutionManager(ToolEngine toolEngine, OpenAIModelClient openAIModelClient) {
         this.conversationManager = new ConversationManager();
@@ -29,6 +43,7 @@ public class ContinuousExecutionManager {
         this.openAIModelClient = openAIModelClient;
         this.executionStep = new AtomicInteger(0);
         this.isExecuting = new AtomicBoolean(false);
+        this.scanner = new Scanner(System.in);
     }
     
     /**
@@ -87,11 +102,30 @@ public class ContinuousExecutionManager {
             
             // 根据处理结果决定下一步行动
             if (processedResponse.startsWith("CONTINUE:")) {
-                // 需要继续执行
+                // 需要继续执行，智能判断是否需要用户输入
                 String nextStep = processedResponse.substring(9); // 移除"CONTINUE:"前缀
                 logger.info("CONTINUE, nextStep:{}", nextStep);
-                conversationManager.addMessageToHistory("user", "继续执行: " + nextStep);
-                return executeTaskStep(nextStep);
+                
+                // 检查是否真的需要用户输入新信息
+                // 如果nextStep包含特定关键词，才提示用户输入
+                if (needsUserInput(nextStep)) {
+                    // 提示用户输入更多信息
+                    System.out.println("AI需要更多信息来继续执行任务: " + nextStep);
+                    System.out.print("请输入您的回复: ");
+                    
+                    // 从命令行读取用户输入
+                    String userInput = scanner.nextLine();
+                    
+                    // 将用户输入添加到历史记录中
+                    conversationManager.addMessageToHistory("user", userInput);
+                    
+                    // 继续执行任务
+                    return executeTaskStep(userInput);
+                } else {
+                    // 不需要用户输入，直接继续执行
+                    logger.info("Continuing execution without user input: {}", nextStep);
+                    return executeTaskStep("基于上下文继续执行任务: " + nextStep);
+                }
             } else if (processedResponse.startsWith("TOOL_RESULT:")) {
                 // 工具执行结果，继续执行
                 String toolResult = processedResponse.substring(12); // 移除"TOOL_RESULT:"前缀
@@ -197,5 +231,42 @@ public class ContinuousExecutionManager {
     public void reset() {
         cancelExecution();
         conversationManager.clearHistory();
+    }
+    
+    /**
+     * 关闭资源
+     */
+    public void close() {
+        if (scanner != null) {
+            scanner.close();
+        }
+    }
+    
+    /**
+     * 智能判断是否需要用户输入
+     * @param nextStep 下一步操作描述
+     * @return 是否需要用户输入
+     */
+    private boolean needsUserInput(String nextStep) {
+        // 转换为小写以便进行不区分大小写的匹配
+        String lowerNextStep = nextStep.toLowerCase();
+        
+        // 检查nextStep中是否包含需要用户输入的关键词
+        for (String keyword : USER_INPUT_KEYWORDS) {
+            // 对于英文关键词，使用小写进行匹配
+            if (keyword.matches(".*[a-zA-Z].*")) {
+                if (lowerNextStep.contains(keyword)) {
+                    return true;
+                }
+            } else {
+                // 对于中文关键词，使用原始大小写进行匹配
+                if (nextStep.contains(keyword)) {
+                    return true;
+                }
+            }
+        }
+        
+        // 如果没有明确要求用户提供信息，则认为不需要用户输入
+        return false;
     }
 }

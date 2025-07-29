@@ -1,5 +1,6 @@
 package com.ai.infrastructure.memory;
 
+import com.ai.infrastructure.agent.AgentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,9 @@ public class MemoryManager {
     // 长期记忆：持久化存储
     private final Map<String, String> longTermMemory;
     
+    // 上下文压缩器
+    private final ContextCompressor contextCompressor;
+    
     // 内存使用阈值 - 与Claude Code中的h11常量一致
     private static final double COMPACTION_THRESHOLD = 0.92;
     private static final int MAX_SHORT_TERM_ITEMS = 100;
@@ -41,6 +45,7 @@ public class MemoryManager {
         this.shortTermMemory = new ArrayList<>();
         this.mediumTermMemory = new ArrayList<>();
         this.longTermMemory = new ConcurrentHashMap<>();
+        this.contextCompressor = new ContextCompressor();
         this.fileCache = new ConcurrentHashMap<>();
         this.currentTokenUsage = 0;
     }
@@ -858,5 +863,24 @@ public class MemoryManager {
         }
         
         return stats.toString();
+    }
+    
+    /**
+     * 获取内存信息摘要
+     * @return 内存信息摘要
+     */
+    public String getMemoryInfo() {
+        return String.format("Short-term: %d, Medium-term: %d, Long-term: %d, Tokens: %d/%d (%.1f%%)", 
+                           shortTermMemory.size(), mediumTermMemory.size(), longTermMemory.size(),
+                           currentTokenUsage, getMaxTokenLimit(), 
+                           (double) currentTokenUsage / getMaxTokenLimit() * 100);
+    }
+    
+    /**
+     * 获取上下文压缩器
+     * @return 上下文压缩器
+     */
+    public ContextCompressor getContextCompressor() {
+        return contextCompressor;
     }
 }

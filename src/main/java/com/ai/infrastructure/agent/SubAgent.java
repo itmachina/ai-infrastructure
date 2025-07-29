@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CancellationException;
 
 /**
  * 子Agent类，负责执行专项任务
@@ -27,6 +28,7 @@ public class SubAgent extends BaseAgent {
     private final int maxExecutionTimeMs;
     private long startTime;
     private int toolCallCount;
+    private String currentTask;
     
     public SubAgent(String agentId, String name) {
         super(agentId, name);
@@ -60,13 +62,25 @@ public class SubAgent extends BaseAgent {
     }
     
     /**
-     * 执行任务 - 支持完整的Agent生命周期管理
+     * 执行任务 - 增强版实现，支持智能工具调度和错误恢复
      * @param task 任务描述
      * @return 执行结果
      */
     @Override
     public CompletableFuture<String> executeTask(String task) {
         logger.debug("SubAgent {} executing task: {}", getAgentId(), task);
+        
+        // 检查是否已被中断
+        if (isAborted.get()) {
+            logger.warn("SubAgent {} aborted before execution", getAgentId());
+            setStatus(AgentStatus.ABORTED);
+            CompletableFuture<String> abortedResult = new CompletableFuture<>();
+            abortedResult.complete("SubAgent aborted before execution");
+            return abortedResult;
+        }
+        
+        // 记录当前任务
+        this.currentTask = task;
         
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -100,16 +114,25 @@ public class SubAgent extends BaseAgent {
                 setStatus(AgentStatus.IDLE);
                 logger.debug("SubAgent {} task execution completed successfully", getAgentId());
                 return result;
+            } catch (CancellationException e) {
+                logger.warn("SubAgent {} task execution cancelled: {}", getAgentId(), e.getMessage());
+                setStatus(AgentStatus.ABORTED);
+                return "SubAgent task execution cancelled: " + e.getMessage();
             } catch (Exception e) {
                 logger.error("Error executing task in SubAgent {}: {}", getAgentId(), e.getMessage(), e);
                 setStatus(AgentStatus.ERROR);
+                // 尝试错误恢复
+                String recoveryResult = attemptErrorRecovery(task, e);
+                if (recoveryResult != null) {
+                    return recoveryResult;
+                }
                 return "Error executing task in SubAgent: " + e.getMessage();
             }
         });
     }
     
     /**
-     * 执行任务并监控资源使用
+     * 执行任务并监控资源使用 - 增强版实现，支持智能工具调度
      * @param task 任务描述
      * @return 执行结果
      */
@@ -133,9 +156,15 @@ public class SubAgent extends BaseAgent {
                 throw new RuntimeException("SubAgent tool call limit exceeded: " + maxToolCalls);
             }
             
-            // 执行任务
+            // 检查是否被中断
+            if (isAborted.get()) {
+                logger.warn("SubAgent {} aborted during execution", getAgentId());
+                throw new CancellationException("SubAgent aborted during execution");
+            }
+            
+            // 智能工具调度 - 根据任务类型选择合适的工具
             logger.debug("SubAgent {} executing tool: {}", getAgentId(), task);
-            String result = toolEngine.executeTool(task);
+            String result = executeToolWithIntelligentScheduling(task);
             toolCallCount++;
             logger.debug("SubAgent {} tool execution completed. Tool calls: {}", getAgentId(), toolCallCount);
             
@@ -144,6 +173,55 @@ public class SubAgent extends BaseAgent {
             logger.error("Task execution failed in SubAgent {}: {}", getAgentId(), e.getMessage(), e);
             throw new RuntimeException("Task execution failed: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * 智能工具调度 - 根据任务类型选择合适的工具
+     * @param task 任务描述
+     * @return 执行结果
+     */
+    private String executeToolWithIntelligentScheduling(String task) {
+        // 分析任务类型并选择合适的工具
+        String toolName = determineToolForTask(task);
+        
+        // 检查工具是否被允许
+        if (!isToolAllowed(toolName)) {
+            logger.warn("Tool {} is not allowed for SubAgent {}", toolName, getAgentId());
+            throw new SecurityException("Tool " + toolName + " is not allowed");
+        }
+        
+        // 执行工具
+        return toolEngine.executeTool(task);
+    }
+    
+    /**
+     * 根据任务类型确定合适的工具
+     * @param task 任务描述
+     * @return 工具名称
+     */
+    private String determineToolForTask(String task) {
+        String lowerTask = task.toLowerCase();
+        
+        // 根据任务关键词匹配工具
+        if (lowerTask.contains("calculate") || lowerTask.contains("计算") || 
+            lowerTask.matches(".*[+\\-*/].*") || lowerTask.matches(".*[<>]=?\\s*.*")) {
+            return "Calculate";
+        } else if (lowerTask.contains("read") || lowerTask.contains("读取")) {
+            return "Read";
+        } else if (lowerTask.contains("write") || lowerTask.contains("写入")) {
+            return "Write";
+        } else if (lowerTask.contains("edit") || lowerTask.contains("编辑")) {
+            return "Edit";
+        } else if (lowerTask.contains("search") || lowerTask.contains("搜索")) {
+            return "Search";
+        } else if (lowerTask.contains("bash") || lowerTask.contains("shell")) {
+            return "Bash";
+        } else if (lowerTask.contains("todo")) {
+            return "TodoWrite";
+        }
+        
+        // 默认使用工具引擎处理
+        return "ToolEngine";
     }
     
     /**
@@ -161,6 +239,64 @@ public class SubAgent extends BaseAgent {
      */
     public Set<String> getAllowedTools() {
         return new HashSet<>(allowedTools);
+    }
+    
+    /**
+     * 尝试错误恢复
+     * @param task 任务描述
+     * @param exception 异常
+     * @return 恢复结果或null
+     */
+    private String attemptErrorRecovery(String task, Exception exception) {
+        logger.debug("Attempting error recovery for task: {}", task);
+        
+        try {
+            // 根据异常类型进行不同的恢复策略
+            if (exception instanceof SecurityException) {
+                // 安全异常，记录日志并返回错误信息
+                logger.warn("Security exception during task execution: {}", exception.getMessage());
+                return "Security error: " + exception.getMessage();
+            } else if (exception instanceof RuntimeException) {
+                // 运行时异常，尝试重新执行任务
+                logger.warn("Runtime exception during task execution, attempting retry: {}", exception.getMessage());
+                return retryTask(task);
+            }
+            
+            // 默认情况下，记录错误并返回null表示无法恢复
+            logger.warn("Unable to recover from exception: {}", exception.getMessage());
+            return null;
+        } catch (Exception recoveryException) {
+            logger.error("Error during recovery attempt: {}", recoveryException.getMessage(), recoveryException);
+            return null;
+        }
+    }
+    
+    /**
+     * 重试任务
+     * @param task 任务描述
+     * @return 执行结果
+     */
+    private String retryTask(String task) {
+        try {
+            // 简单的重试机制，最多重试3次
+            for (int i = 0; i < 3; i++) {
+                try {
+                    logger.debug("Retrying task (attempt {}): {}", i + 1, task);
+                    return toolEngine.executeTool(task);
+                } catch (Exception e) {
+                    logger.warn("Retry attempt {} failed: {}", i + 1, e.getMessage());
+                    if (i == 2) {
+                        // 最后一次重试也失败了
+                        throw e;
+                    }
+                    // 等待一段时间再重试
+                    Thread.sleep(1000);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("All retry attempts failed: {}", e.getMessage(), e);
+        }
+        return null;
     }
     
     /**

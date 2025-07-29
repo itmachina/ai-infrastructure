@@ -1,6 +1,7 @@
 package com.ai.infrastructure.agent;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Agent基类，定义Agent的基本行为
@@ -9,6 +10,7 @@ public abstract class BaseAgent {
     protected String agentId;
     protected String name;
     protected AgentStatus status;
+    protected final AtomicBoolean isAborted = new AtomicBoolean(false);
     
     public BaseAgent(String agentId, String name) {
         this.agentId = agentId;
@@ -60,6 +62,23 @@ public abstract class BaseAgent {
      * @return boolean
      */
     public boolean isAborted() {
-        return status == AgentStatus.ABORTED;
+        return isAborted.get() || status == AgentStatus.ABORTED;
+    }
+    
+    /**
+     * 中断Agent执行
+     */
+    public void abort() {
+        if (isAborted.compareAndSet(false, true)) {
+            setStatus(AgentStatus.ABORTED);
+        }
+    }
+    
+    /**
+     * 重置Agent状态
+     */
+    public void reset() {
+        isAborted.set(false);
+        setStatus(AgentStatus.IDLE);
     }
 }

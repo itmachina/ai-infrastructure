@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CancellationException;
 
 /**
  * 主Agent类，负责协调和调度子Agent
@@ -27,6 +29,10 @@ public class MainAgent extends BaseAgent {
     private List<SubAgent> subAgents;
     private OpenAIModelClient openAIModelClient;
     private ContinuousExecutionManager continuousExecutionManager;
+    
+    // 增强的可中断性支持
+    private final AtomicBoolean isAborted = new AtomicBoolean(false);
+    private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     
     public MainAgent(String agentId, String name) {
         super(agentId, name);
@@ -74,7 +80,7 @@ public class MainAgent extends BaseAgent {
     }
     
     /**
-     * 执行任务
+     * 执行任务 - 增强版实现，支持可中断性和资源管理
      * @param task 任务描述
      * @return 执行结果
      */
@@ -82,10 +88,37 @@ public class MainAgent extends BaseAgent {
     public CompletableFuture<String> executeTask(String task) {
         logger.debug("Executing task: {}", task);
         
+        // 检查是否已被中断
+        if (isAborted.get()) {
+            logger.warn("MainAgent aborted before execution");
+            setStatus(AgentStatus.ABORTED);
+            CompletableFuture<String> abortedResult = new CompletableFuture<>();
+            abortedResult.complete("MainAgent aborted before execution");
+            return abortedResult;
+        }
+        
+        // 设置执行状态
+        if (!isExecuting.compareAndSet(false, true)) {
+            logger.warn("MainAgent is already executing a task");
+            CompletableFuture<String> busyResult = new CompletableFuture<>();
+            busyResult.complete("MainAgent is already executing a task");
+            return busyResult;
+        }
+        
         // 如果配置了模型客户端，使用持续执行管理器
         if (openAIModelClient != null && continuousExecutionManager != null) {
             logger.debug("Using continuous execution manager with OpenAI model");
-            return continuousExecutionManager.executeTaskContinuously(task);
+            return continuousExecutionManager.executeTaskContinuously(task)
+                .whenComplete((result, throwable) -> {
+                    isExecuting.set(false);
+                    if (throwable != null) {
+                        logger.error("Error in continuous execution: {}", throwable.getMessage(), throwable);
+                        setStatus(AgentStatus.ERROR);
+                    } else {
+                        logger.debug("Continuous execution completed successfully");
+                        setStatus(AgentStatus.IDLE);
+                    }
+                });
         }
         
         // 否则使用原有的执行方式
@@ -94,6 +127,13 @@ public class MainAgent extends BaseAgent {
             try {
                 setStatus(AgentStatus.RUNNING);
                 logger.debug("Agent status set to RUNNING");
+                
+                // 检查中断信号
+                if (isAborted.get()) {
+                    logger.warn("MainAgent aborted during execution");
+                    setStatus(AgentStatus.ABORTED);
+                    return "MainAgent aborted during execution";
+                }
                 
                 // 安全检查
                 if (!securityManager.validateInput(task)) {
@@ -120,6 +160,8 @@ public class MainAgent extends BaseAgent {
                 logger.error("Error executing task: {}", task, e);
                 setStatus(AgentStatus.ERROR);
                 return "Error executing task: " + e.getMessage();
+            } finally {
+                isExecuting.set(false);
             }
         });
     }
@@ -181,5 +223,51 @@ public class MainAgent extends BaseAgent {
      */
     public List<SubAgent> getSubAgents() {
         return new ArrayList<>(subAgents);
+    }
+    
+    /**
+     * 中断MainAgent执行
+     */
+    public void abort() {
+        if (isAborted.compareAndSet(false, true)) {
+            setStatus(AgentStatus.ABORTED);
+            logger.info("MainAgent {} aborted", getAgentId());
+            
+            // 中断所有子Agent
+            for (SubAgent subAgent : subAgents) {
+                subAgent.abort();
+            }
+            
+            // 如果有持续执行管理器，也中断它
+            if (continuousExecutionManager != null) {
+                continuousExecutionManager.cancelExecution();
+            }
+        }
+    }
+    
+    /**
+     * 检查是否被中断
+     * @return boolean
+     */
+    public boolean isAborted() {
+        return isAborted.get();
+    }
+    
+    /**
+     * 获取资源使用信息
+     * @return String
+     */
+    public String getResourceUsage() {
+        StringBuilder usage = new StringBuilder();
+        usage.append("MainAgent: ").append(getName()).append("\n");
+        usage.append("Status: ").append(getStatus()).append("\n");
+        usage.append("SubAgents: ").append(subAgents.size()).append("\n");
+        
+        // 添加内存管理信息
+        if (memoryManager != null) {
+            usage.append("Memory info: ").append(memoryManager.getMemoryInfo()).append("\n");
+        }
+        
+        return usage.toString();
     }
 }
