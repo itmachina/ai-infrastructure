@@ -145,7 +145,11 @@ mvn exec:java -Dexec.mainClass="com.ai.infrastructure.OpenAIModelUsageExample" -
 
 ### 运行演示示例
 ```bash
+# 运行ContinuousExecutionDemo
 mvn exec:java@run-demo -Dexec.args="YOUR_API_KEY_HERE"
+
+# 运行核心功能演示
+mvn exec:java@run-core-features-demo
 ```
 
 ## 配置选项
@@ -203,6 +207,7 @@ java -jar ai-infrastructure.jar YOUR_API_KEY_HERE
 - Gson 2.10.1 (JSON处理)
 - SLF4J 2.0.6 (日志记录)
 - Logback 1.4.5 (日志实现)
+- Lombok 1.18.26 (减少样板代码)
 - JUnit 5.9.2 (测试框架)
 - Mockito 5.1.1 (测试框架)
 

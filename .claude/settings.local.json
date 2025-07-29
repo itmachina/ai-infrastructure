@@ -76,7 +76,11 @@
       "Bash(ls -la ~/.m2/repository/org/apache/pdfbox/pdfbox/2.0.27/)",
       "Bash(mvn clean compile)",
       "Bash(rm -rf D:repocommons-codeccommons-codec1.13)",
-      "Bash(mvn -X clean compile)"
+      "Bash(mvn -X clean compile)",
+      "Bash(mvn test-compile)",
+      "Bash(mvn test-compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.CoreFeaturesDemo\" -Dexec.classpathScope=\"test\")",
+      "Bash(ls -la target/test-classes/com/ai/infrastructure/)",
+      "Bash(mvn test -Dtest=CoreFeaturesDemoTest)"
     ],
     "deny": []
   }

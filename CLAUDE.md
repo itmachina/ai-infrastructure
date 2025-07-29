@@ -16,6 +16,8 @@ This is a Java 17 AI infrastructure project based on Claude Code's core principl
 - Apply Claude Code's system prompts for enhanced security and functionality
 - Implement retry mechanisms with exponential backoff for improved reliability
 - Use context-aware execution for better adaptability
+- Use Lombok annotations to reduce boilerplate code
+- Use SLF4J for consistent logging throughout the codebase
 
 ## Project Structure
 - `src/main/java/com/ai/infrastructure/` - Main source code

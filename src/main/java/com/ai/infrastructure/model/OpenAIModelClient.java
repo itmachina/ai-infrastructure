@@ -5,6 +5,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -22,6 +25,8 @@ import java.util.ArrayList;
  * 基于Claude Code的yj函数实现增强的交互系统
  */
 public class OpenAIModelClient {
+    private static final Logger logger = LoggerFactory.getLogger(OpenAIModelClient.class);
+    
     private static final String API_URL = "https://apis.iflow.cn/v1/chat/completions";
     private static final String DEFAULT_MODEL = "Qwen3-235B-A22B-Instruct";
     private static final int DEFAULT_MAX_TOKENS = 1000;
@@ -131,12 +136,12 @@ public class OpenAIModelClient {
         
         // 记录模型调用开始
         long startTime = System.currentTimeMillis();
-        System.out.println("tengu_model_call_start: Starting model call with prompt: " + prompt);
+        logger.info("Starting model call with prompt: {}", prompt);
         
         // 检查API密钥
         if (apiKey == null || apiKey.isEmpty()) {
             String error = "Error: OpenAI model API key not set";
-            System.err.println("tengu_model_call_api_key_error: " + error);
+            logger.error("API key error: {}", error);
             failedCalls++;
             return error;
         }
@@ -145,7 +150,7 @@ public class OpenAIModelClient {
             try {
                 // 记录当前尝试次数
                 if (retryCount > 0) {
-                    System.out.println("tengu_model_call_retry: Retrying model call (attempt " + (retryCount + 1) + " of " + (maxRetries + 1) + ")");
+                    logger.info("Retrying model call (attempt {} of {})", (retryCount + 1), (maxRetries + 1));
                     retryCountTotal++;
                 }
                 
@@ -170,13 +175,13 @@ public class OpenAIModelClient {
                 // 检查结果是否包含错误
                 if (result.startsWith("Error:")) {
                     // 记录错误信息
-                    System.err.println("tengu_model_call_error: Model call returned error: " + result);
+                    logger.error("Model call returned error: {}", result);
                     
                     // 根据错误类型决定是否重试
                     ModelCallErrorType errorType = classifyError(result);
                     switch (errorType) {
                         case CRITICAL:
-                            System.err.println("tengu_model_call_critical_error: Critical error detected, stopping retries: " + result);
+                            logger.error("Critical error detected, stopping retries: {}", result);
                             failedCalls++;
                             return result;
                         case TRANSIENT:
@@ -184,11 +189,11 @@ public class OpenAIModelClient {
                             if (retryCount < maxRetries) {
                                 retryCount++;
                                 long delay = calculateRetryDelay(retryCount, errorType);
-                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for transient error");
+                                logger.info("Scheduling retry in {}ms for transient error", delay);
                                 Thread.sleep(delay);
                                 continue;
                             } else {
-                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for transient error, giving up on model call");
+                                logger.error("Max retries reached for transient error, giving up on model call");
                                 failedCalls++;
                             }
                             break;
@@ -197,11 +202,11 @@ public class OpenAIModelClient {
                             if (retryCount < maxRetries) {
                                 retryCount++;
                                 long delay = calculateRetryDelay(retryCount, errorType);
-                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for rate limit error");
+                                logger.info("Scheduling retry in {}ms for rate limit error", delay);
                                 Thread.sleep(delay);
                                 continue;
                             } else {
-                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for rate limit error, giving up on model call");
+                                logger.error("Max retries reached for rate limit error, giving up on model call");
                                 failedCalls++;
                             }
                             break;
@@ -210,11 +215,11 @@ public class OpenAIModelClient {
                             if (retryCount < maxRetries) {
                                 retryCount++;
                                 long delay = calculateRetryDelay(retryCount, errorType);
-                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for unknown error");
+                                logger.info("Scheduling retry in {}ms for unknown error", delay);
                                 Thread.sleep(delay);
                                 continue;
                             } else {
-                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for unknown error, giving up on model call");
+                                logger.error("Max retries reached for unknown error, giving up on model call");
                                 failedCalls++;
                             }
                             break;
@@ -226,21 +231,21 @@ public class OpenAIModelClient {
                     totalResponseTime += responseTime;
                     successfulCalls++;
                     
-                    System.out.println("tengu_model_call_success: Model call executed successfully after " + (retryCount + 1) + " attempts");
-                    System.out.println("tengu_model_call_stats: Response time=" + responseTime + "ms");
+                    logger.info("Model call executed successfully after {} attempts", (retryCount + 1));
+                    logger.info("Response time: {}ms", responseTime);
                     return result;
                 }
                 
                 return result;
             } catch (InterruptedException ie) {
                 // 处理中断异常
-                System.err.println("tengu_model_call_interrupted: Model call interrupted: " + ie.getMessage());
+                logger.error("Model call interrupted: {}", ie.getMessage());
                 Thread.currentThread().interrupt();
                 failedCalls++;
                 return "Error: Model call interrupted";
             } catch (Exception e) {
                 lastException = e;
-                System.err.println("tengu_model_call_exception: Exception during model call (attempt " + (retryCount + 1) + "): " + e.getMessage());
+                logger.error("Exception during model call (attempt {}): {}", (retryCount + 1), e.getMessage());
                 
                 // 根据异常类型决定是否重试
                 if (shouldRetryOnException(e) && retryCount < maxRetries) {
@@ -248,16 +253,16 @@ public class OpenAIModelClient {
                     retryCountTotal++;
                     try {
                         long delay = calculateRetryDelay(retryCount, ModelCallErrorType.UNKNOWN);
-                        System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms due to exception");
+                        logger.info("Scheduling retry in {}ms due to exception", delay);
                         Thread.sleep(delay);
                     } catch (InterruptedException ie) {
-                        System.err.println("tengu_model_call_retry_interrupted: Retry interrupted: " + ie.getMessage());
+                        logger.error("Retry interrupted: {}", ie.getMessage());
                         Thread.currentThread().interrupt();
                         failedCalls++;
                         break;
                     }
                 } else {
-                    System.err.println("tengu_model_call_max_retries_reached: Max retries reached after exception, giving up on model call");
+                    logger.error("Max retries reached after exception, giving up on model call");
                     failedCalls++;
                     break;
                 }
@@ -266,7 +271,7 @@ public class OpenAIModelClient {
         
         String errorMessage = "Error calling OpenAI model after " + maxRetries + " retries: " + 
                (lastException != null ? lastException.getMessage() : "Unknown error");
-        System.err.println("tengu_model_call_final_error: " + errorMessage);
+        logger.error("{}", errorMessage);
         return errorMessage;
     }
     

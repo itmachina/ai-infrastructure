@@ -1,16 +1,20 @@
 package com.ai.infrastructure.scheduler;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Comparator;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Function;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Comparator;
 
 /**
  * 任务调度器，支持并发控制和抢占式调度
  * 基于Claude Code的调度机制实现优先级调度和任务抢占
  */
 public class TaskScheduler {
+    private static final Logger logger = LoggerFactory.getLogger(TaskScheduler.class);
+    
     private final ExecutorService executorService;
     private final Semaphore concurrencyLimiter;
     private final int maxConcurrency;
@@ -58,53 +62,76 @@ public class TaskScheduler {
      * @return 执行结果
      */
     public String scheduleTaskWithId(String taskId, String task, Function<String, String> taskProcessor, int priority) {
+        logger.debug("Scheduling task with ID: {}, priority: {}", taskId, priority);
+        
         try {
             // 创建调度任务
             ScheduledTask scheduledTask = new ScheduledTask(taskId, task, taskProcessor, priority);
             taskQueue.offer(scheduledTask);
+            logger.debug("Task added to queue: {}", taskId);
             
             // 获取执行许可
             concurrencyLimiter.acquire();
+            logger.debug("Acquired concurrency permit for task: {}", taskId);
             
             // 从队列中获取最高优先级任务
             ScheduledTask currentTask = taskQueue.poll();
+            logger.debug("Retrieved task from queue: {}", currentTask.getTaskId());
             
             // 创建运行中的任务对象
             RunningTask runningTask = new RunningTask(currentTask.getTaskId(), null);
             runningTasks.put(currentTask.getTaskId(), runningTask);
+            logger.debug("Registered running task: {}", currentTask.getTaskId());
             
             // 提交任务执行
             Future<String> future = executorService.submit(() -> {
                 try {
+                    logger.debug("Starting execution of task: {}", currentTask.getTaskId());
+                    
                     // 更新线程信息
                     runningTask.setThread(Thread.currentThread());
                     
                     // 检查是否被抢占
                     if (isPreempted(currentTask.getTaskId())) {
+                        logger.info("Task preempted: {}", currentTask.getTaskId());
                         return "Task preempted: " + currentTask.getTask();
                     }
                     
                     // 执行任务
-                    return currentTask.getTaskProcessor().apply(currentTask.getTask());
+                    String result = currentTask.getTaskProcessor().apply(currentTask.getTask());
+                    logger.debug("Task execution completed: {}", currentTask.getTaskId());
+                    return result;
+                } catch (Exception e) {
+                    logger.error("Error executing task: {}", currentTask.getTaskId(), e);
+                    return "Task execution failed: " + e.getMessage();
                 } finally {
                     // 移除运行中的任务
                     runningTasks.remove(currentTask.getTaskId());
+                    logger.debug("Removed running task: {}", currentTask.getTaskId());
+                    
                     // 释放执行许可
                     concurrencyLimiter.release();
+                    logger.debug("Released concurrency permit for task: {}", currentTask.getTaskId());
                 }
             });
             
             // 注册Future以便取消
             runningTask.setFuture(future);
+            logger.debug("Registered future for task: {}", currentTask.getTaskId());
             
             // 等待并返回结果
-            return future.get(120, TimeUnit.SECONDS); // 120秒超时
+            String result = future.get(120, TimeUnit.SECONDS); // 120秒超时
+            logger.debug("Task execution result for {}: {}", currentTask.getTaskId(), result);
+            return result;
         } catch (InterruptedException e) {
+            logger.warn("Task execution interrupted: {}", taskId, e);
             Thread.currentThread().interrupt();
             return "Task execution interrupted: " + e.getMessage();
         } catch (ExecutionException e) {
+            logger.error("Task execution failed: {}", taskId, e);
             return "Task execution failed: " + e.getCause().getMessage();
         } catch (TimeoutException e) {
+            logger.warn("Task execution timed out: {}", taskId, e);
             return "Task execution timed out: " + e.getMessage();
         }
     }
@@ -126,16 +153,26 @@ public class TaskScheduler {
      * @return 是否成功取消
      */
     public boolean cancelTask(String taskId) {
+        logger.debug("Attempting to cancel task: {}", taskId);
+        
         RunningTask runningTask = runningTasks.get(taskId);
         if (runningTask != null && runningTask.getFuture() != null) {
             boolean cancelled = runningTask.getFuture().cancel(true);
+            logger.debug("Task cancellation result for {}: {}", taskId, cancelled);
+            
             if (cancelled) {
                 // 中断执行任务的线程
-                runningTask.getThread().interrupt();
+                if (runningTask.getThread() != null) {
+                    runningTask.getThread().interrupt();
+                    logger.debug("Interrupted thread for task: {}", taskId);
+                }
                 runningTasks.remove(taskId);
+                logger.debug("Removed task from running tasks: {}", taskId);
             }
             return cancelled;
         }
+        
+        logger.debug("Task not found or not running: {}", taskId);
         return false;
     }
     
@@ -187,22 +224,32 @@ public class TaskScheduler {
      * 关闭调度器
      */
     public void shutdown() {
+        logger.info("Shutting down TaskScheduler");
+        
         // 取消所有运行中的任务
+        logger.debug("Cancelling {} running tasks", runningTasks.size());
         for (RunningTask task : runningTasks.values()) {
             if (task.getFuture() != null) {
-                task.getFuture().cancel(true);
+                boolean cancelled = task.getFuture().cancel(true);
+                logger.debug("Cancelled task {}: {}", task.getTaskId(), cancelled);
             }
         }
         
         executorService.shutdown();
         try {
             if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+                logger.warn("Executor service did not terminate in time, forcing shutdown");
                 executorService.shutdownNow();
+            } else {
+                logger.info("Executor service terminated gracefully");
             }
         } catch (InterruptedException e) {
+            logger.warn("Interrupted while waiting for executor service termination", e);
             executorService.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        
+        logger.info("TaskScheduler shutdown completed");
     }
     
     /**

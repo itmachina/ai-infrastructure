@@ -1,19 +1,19 @@
 package com.ai.infrastructure.security;
 
-import java.util.regex.Pattern;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * 安全管理器，实现6层安全防护
  * 基于Claude Code的安全架构实现完整的企业级安全防护体系
  */
 public class SecurityManager {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityManager.class);
+    
     // 第1层：防御性安全策略 - 恶意代码防护常量
     private static final String DEFENSIVE_SECURITY_POLICY = 
         "IMPORTANT: Assist with defensive security tasks only. " +
@@ -350,8 +350,8 @@ public class SecurityManager {
         );
         auditLog.add(event);
         
-        // 输出安全事件日志
-        System.err.println("tengu_security_event: " + eventType + " - " + details);
+        // 使用SLF4J记录安全事件日志
+        logger.warn("Security event: {} - {}", eventType, details);
     }
     
     /**

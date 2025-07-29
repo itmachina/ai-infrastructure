@@ -1,23 +1,21 @@
 package com.ai.infrastructure.conversation;
 
-import com.ai.infrastructure.tools.ToolEngine;
-import com.ai.infrastructure.model.OpenAIModelClient;
 import com.ai.infrastructure.agent.SubAgent;
-import com.ai.infrastructure.agent.AgentStatus;
-import com.ai.infrastructure.conversation.ConversationManager;
+import com.ai.infrastructure.model.OpenAIModelClient;
+import com.ai.infrastructure.tools.ToolEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 
 /**
  * 持续执行管理器，负责管理多轮对话和任务的持续执行
  * 基于Claude Code的持续执行机制实现
  */
 public class ContinuousExecutionManager {
-    private static final Logger logger = Logger.getLogger(ContinuousExecutionManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ContinuousExecutionManager.class.getName());
     private ConversationManager conversationManager;
     private ToolEngine toolEngine;
     private OpenAIModelClient openAIModelClient;
@@ -91,28 +89,28 @@ public class ContinuousExecutionManager {
             if (processedResponse.startsWith("CONTINUE:")) {
                 // 需要继续执行
                 String nextStep = processedResponse.substring(9); // 移除"CONTINUE:"前缀
-                logger.info("CONTINUE, nextStep:{}" + nextStep);
+                logger.info("CONTINUE, nextStep:{}", nextStep);
                 conversationManager.addMessageToHistory("user", "继续执行: " + nextStep);
                 return executeTaskStep(nextStep);
             } else if (processedResponse.startsWith("TOOL_RESULT:")) {
                 // 工具执行结果，继续执行
                 String toolResult = processedResponse.substring(12); // 移除"TOOL_RESULT:"前缀
-                logger.info("TOOL_RESULT, nextStep:{}" + toolResult);
+                logger.info("TOOL_RESULT, nextStep:{}", toolResult);
                 return executeTaskStep("基于工具执行结果继续任务: " + toolResult);
             } else if (processedResponse.startsWith("SUBAGENT:")) {
                 // 需要创建子Agent并执行任务
                 String subagentTask = processedResponse.substring(9); // 移除"SUBAGENT:"前缀
-                logger.info("SUBAGENT, nextStep:{}" + subagentTask);
+                logger.info("SUBAGENT, nextStep:{}", subagentTask);
                 // 创建子Agent并执行任务
                 return executeSubAgentTask(subagentTask);
             } else if (processedResponse.startsWith("COMPLETE:")) {
                 // 任务完成
                 String result = processedResponse.substring(9); // 移除"COMPLETE:"前缀
-                logger.info("COMPLETE, nextStep:{}" + result);
+                logger.info("COMPLETE, nextStep:{}", result);
                 isExecuting.set(false);
                 return "任务完成: " + result;
             } else {
-                logger.info("ELSE, processedResponse:{}" + processedResponse);
+                logger.info("ELSE, processedResponse:{}", processedResponse);
                 // 默认情况，任务完成
                 isExecuting.set(false);
                 return "任务完成: " + processedResponse;

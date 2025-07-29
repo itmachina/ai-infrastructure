@@ -1,5 +1,8 @@
 package com.ai.infrastructure.memory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -8,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 基于Claude Code的AU2函数实现完整的8段式上下文压缩机制
  */
 public class MemoryManager {
+    private static final Logger logger = LoggerFactory.getLogger(MemoryManager.class);
+    
     // 短期记忆：当前会话上下文
     private final List<MemoryItem> shortTermMemory;
     
@@ -74,31 +79,31 @@ public class MemoryManager {
         
         // 基本阈值检查
         if (tokenRatio > COMPACTION_THRESHOLD) {
-            System.out.println("tengu_compact_trigger: Token ratio " + tokenRatio + " exceeds threshold " + COMPACTION_THRESHOLD);
+            logger.info("Memory compaction triggered: Token ratio {} exceeds threshold {}", tokenRatio, COMPACTION_THRESHOLD);
             return true;
         }
         
         // 如果短期记忆项数过多，也需要压缩
         if (shortTermMemory.size() > MAX_SHORT_TERM_ITEMS) {
-            System.out.println("tengu_compact_trigger: Short term memory size " + shortTermMemory.size() + " exceeds limit " + MAX_SHORT_TERM_ITEMS);
+            logger.info("Memory compaction triggered: Short term memory size {} exceeds limit {}", shortTermMemory.size(), MAX_SHORT_TERM_ITEMS);
             return true;
         }
         
         // 如果有大量重复内容，也需要压缩
         if (hasHighRedundancy()) {
-            System.out.println("tengu_compact_trigger: High redundancy detected in short term memory");
+            logger.info("Memory compaction triggered: High redundancy detected in short term memory");
             return true;
         }
         
         // 检查是否有长时间未压缩的内容
         if (hasStaleContent()) {
-            System.out.println("tengu_compact_trigger: Stale content detected, triggering compaction");
+            logger.info("Memory compaction triggered: Stale content detected, triggering compaction");
             return true;
         }
         
         // 检查是否需要基于时间的压缩（例如，超过5分钟未压缩）
         if (needsTimeBasedCompaction()) {
-            System.out.println("tengu_compact_trigger: Time-based compaction triggered");
+            logger.info("Memory compaction triggered: Time-based compaction triggered");
             return true;
         }
         
@@ -263,7 +268,7 @@ public class MemoryManager {
         if (size > 5) {
             // 记录压缩开始
             long startTime = System.currentTimeMillis();
-            System.out.println("tengu_compact_start: Starting memory compaction with " + size + " messages");
+            logger.info("Starting memory compaction with {} messages", size);
             
             // 计算压缩前的Token总数
             int tokensBeforeCompaction = currentTokenUsage;
@@ -277,8 +282,8 @@ public class MemoryManager {
             
             // 记录压缩事件
             long endTime = System.currentTimeMillis();
-            System.out.println("tengu_compact_complete: Compacted " + size + " messages in " + (endTime - startTime) + "ms");
-            System.out.println("tengu_compact_stats: Before=" + tokensBeforeCompaction + " tokens, After=" + compressedTokens + " tokens");
+            logger.info("Compacted {} messages in {}ms", size, (endTime - startTime));
+            logger.info("Memory compaction stats: Before={} tokens, After={} tokens", tokensBeforeCompaction, compressedTokens);
             
             // 智能清理短期记忆中的旧数据
             int keepCount = determineKeepCount();
@@ -299,12 +304,12 @@ public class MemoryManager {
                 // 更新Token使用量为压缩后的值
                 currentTokenUsage = compressedTokens + (currentTokenUsage - compressedTokens);
                 
-                System.out.println("tengu_compact_cleanup: Removed " + itemsToRemove + " old messages, freed " + tokensToRemove + " tokens");
+                logger.info("Removed {} old messages, freed {} tokens", itemsToRemove, tokensToRemove);
                 
                 // 计算压缩比率
                 if (tokensBeforeCompaction > 0) {
                     double compressionRatio = (double) (tokensBeforeCompaction - compressedTokens) / tokensBeforeCompaction;
-                    System.out.println("tengu_compact_ratio: Compression ratio " + String.format("%.2f", compressionRatio * 100) + "%");
+                    logger.info("Compression ratio: {:.2f}%", compressionRatio * 100);
                 }
             }
         }
@@ -679,7 +684,7 @@ public class MemoryManager {
             }
         }
         
-        System.out.println("tengu_post_compact_file_restore_success: Restored " + restoredFiles.size() + " files");
+        logger.info("Restored {} files", restoredFiles.size());
         return restoredFiles;
     }
     

@@ -1,15 +1,16 @@
 package com.ai.infrastructure.agent;
 
-import com.ai.infrastructure.scheduler.TaskScheduler;
+import com.ai.infrastructure.conversation.ContinuousExecutionManager;
 import com.ai.infrastructure.memory.MemoryManager;
+import com.ai.infrastructure.model.OpenAIModelClient;
+import com.ai.infrastructure.scheduler.TaskScheduler;
 import com.ai.infrastructure.security.SecurityManager;
 import com.ai.infrastructure.tools.ToolEngine;
-import com.ai.infrastructure.model.OpenAIModelClient;
-import com.ai.infrastructure.conversation.ConversationManager;
-import com.ai.infrastructure.conversation.ContinuousExecutionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -17,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
  * 集成OpenAI风格大模型接口作为核心AI能力
  */
 public class MainAgent extends BaseAgent {
+    private static final Logger logger = LoggerFactory.getLogger(MainAgent.class);
+    
     private TaskScheduler scheduler;
     private MemoryManager memoryManager;
     private SecurityManager securityManager;
@@ -77,33 +80,44 @@ public class MainAgent extends BaseAgent {
      */
     @Override
     public CompletableFuture<String> executeTask(String task) {
+        logger.debug("Executing task: {}", task);
+        
         // 如果配置了模型客户端，使用持续执行管理器
         if (openAIModelClient != null && continuousExecutionManager != null) {
+            logger.debug("Using continuous execution manager with OpenAI model");
             return continuousExecutionManager.executeTaskContinuously(task);
         }
         
         // 否则使用原有的执行方式
+        logger.debug("Using fallback execution method");
         return CompletableFuture.supplyAsync(() -> {
             try {
                 setStatus(AgentStatus.RUNNING);
+                logger.debug("Agent status set to RUNNING");
                 
                 // 安全检查
                 if (!securityManager.validateInput(task)) {
+                    logger.warn("Task validation failed for task: {}", task);
                     throw new SecurityException("Task validation failed");
                 }
                 
                 // 内存管理检查
                 memoryManager.checkMemoryPressure();
+                logger.debug("Memory pressure check completed");
                 
                 // 调度任务执行
                 String result = scheduler.scheduleTask(task, this::processTask);
+                logger.debug("Task scheduled and executed");
                 
                 // 更新内存
                 memoryManager.updateContext(task, result);
+                logger.debug("Memory context updated");
                 
                 setStatus(AgentStatus.IDLE);
+                logger.debug("Task execution completed successfully");
                 return result;
             } catch (Exception e) {
+                logger.error("Error executing task: {}", task, e);
                 setStatus(AgentStatus.ERROR);
                 return "Error executing task: " + e.getMessage();
             }

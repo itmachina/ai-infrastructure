@@ -138,9 +138,9 @@ public class ConversationManager {
                             String toolResult = toolEngine.executeToolWithRetry(toolName + " " + toolParams, 3);
                             
                             // 添加工具结果到历史记录
-                            addMessageToHistory("tool_result", "Tool: " + toolName + "\nResult: " + toolResult);
+                            addMessageToHistory("tool_result", "Tool: " + toolName + "\n" + toolResult);
                             
-                            return "TOOL_RESULT:" + content + "\nTool execution result: " + toolResult;
+                            return "TOOL_RESULT:" + toolResult;
                         } else {
                             return "Error: Invalid tool_call action: missing tool_name or tool_params";
                         }

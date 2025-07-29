@@ -1,18 +1,21 @@
 package com.ai.infrastructure.tools;
 
 import com.ai.infrastructure.security.SecurityManager;
-import java.util.concurrent.CompletableFuture;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.regex.Pattern;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 工具引擎，实现6阶段执行流程
  * 基于Claude Code的工具执行机制实现完整的安全检查和执行流程
  */
 public class ToolEngine {
+    private static final Logger logger = LoggerFactory.getLogger(ToolEngine.class);
+    
     private Map<String, ToolExecutor> registeredTools;
     private SecurityManager securityManager;
     private Map<String, Object> executionContext;
@@ -45,6 +48,8 @@ public class ToolEngine {
      * @return 执行结果
      */
     public String executeTool(String task) {
+        logger.debug("Executing tool for task: {}", task);
+        
         try {
             // 阶段1: 工具发现与验证
             String toolName = discoverTool(task);
@@ -52,49 +57,51 @@ public class ToolEngine {
                 // 检查是否尝试使用被禁止的命令
                 String forbiddenCommand = checkForbiddenCommands(task);
                 if (forbiddenCommand != null) {
-                    System.err.println("tengu_forbidden_command: Forbidden command detected: " + forbiddenCommand);
+                    logger.warn("Forbidden command detected: {}", forbiddenCommand);
                     return "Error: Command '" + forbiddenCommand + "' is not allowed. Please use the appropriate tool instead.";
                 }
-                System.err.println("tengu_unknown_tool: Unknown tool for task: " + task);
+                logger.warn("Unknown tool for task: {}", task);
                 return "Unknown tool for task: " + task;
             }
             
             // 记录工具执行开始
-            System.out.println("tengu_tool_execution_start: Starting execution of tool '" + toolName + "' with task: " + task);
+            logger.info("Starting execution of tool '{}' with task: {}", toolName, task);
             
             // 阶段2: 输入验证 (Zod Schema风格验证)
             if (!validateInput(task)) {
-                System.err.println("tengu_input_validation_failed: Input validation failed for task: " + task);
+                logger.warn("Input validation failed for task: {}", task);
                 return "Input validation failed for task: " + task;
             }
             
             // 阶段3: 权限检查与门控
             if (!checkPermissions(toolName, task)) {
-                System.err.println("tengu_permission_denied: Permission denied for tool: " + toolName);
+                logger.warn("Permission denied for tool: {}", toolName);
                 return "Permission denied for tool: " + toolName;
             }
             
             // 阶段4: 取消检查 (AbortController风格)
             if (isCancelled()) {
-                System.out.println("tengu_task_cancelled: Task was cancelled");
+                logger.info("Task was cancelled");
                 return "Task was cancelled";
             }
             
             // 阶段5: 工具执行
             ToolExecutor executor = registeredTools.get(toolName);
+            logger.debug("Executing tool: {}", toolName);
             String result = executor.execute(task);
+            logger.debug("Tool execution completed: {}", toolName);
             
             // 阶段6: 结果格式化与清理
             String formattedResult = formatResult(result);
             
             // 记录工具执行成功
-            System.out.println("tengu_tool_execution_success: Tool '" + toolName + "' executed successfully");
+            logger.info("Tool '{}' executed successfully", toolName);
             
             return formattedResult;
             
         } catch (Exception e) {
             // 记录工具执行错误
-            System.err.println("tengu_tool_execution_error: Tool execution failed - " + e.getMessage());
+            logger.error("Tool execution failed: {}", e.getMessage(), e);
             return "Error executing tool: " + e.getMessage();
         }
     }
@@ -106,17 +113,19 @@ public class ToolEngine {
      * @return 执行结果
      */
     public String executeToolWithRetry(String task, int maxRetries) {
+        logger.debug("Executing tool with retry for task: {}, max retries: {}", task, maxRetries);
+        
         int retryCount = 0;
         Exception lastException = null;
         
         // 记录任务开始执行
-        System.out.println("tengu_tool_execution_start: Starting execution of task: " + task);
+        logger.info("Starting execution of task: {}", task);
         
         while (retryCount <= maxRetries) {
             try {
                 // 记录当前尝试次数
                 if (retryCount > 0) {
-                    System.out.println("tengu_tool_retry: Retrying task (attempt " + (retryCount + 1) + " of " + (maxRetries + 1) + "): " + task);
+                    logger.info("Retrying task (attempt {} of {}): {}", retryCount + 1, maxRetries + 1, task);
                 }
                 
                 // 执行工具
@@ -125,50 +134,50 @@ public class ToolEngine {
                 // 检查结果是否包含错误
                 if (result.startsWith("Error:")) {
                     // 记录错误信息
-                    System.err.println("tengu_tool_error: Tool execution returned error: " + result);
+                    logger.warn("Tool execution returned error: {}", result);
                     
                     // 如果是权限错误或安全错误，不重试
                     if (result.contains("Permission denied") || result.contains("command_injection_detected")) {
-                        System.err.println("tengu_tool_critical_error: Critical error detected, stopping retries: " + result);
+                        logger.error("Critical error detected, stopping retries: {}", result);
                         return result;
                     }
                     
                     // 如果是其他错误，可以重试
                     if (retryCount < maxRetries) {
                         retryCount++;
-                        System.out.println("tengu_tool_retry_scheduled: Scheduling retry in " + (1000 * retryCount) + "ms");
+                        logger.info("Scheduling retry in {}ms", 1000 * retryCount);
                         Thread.sleep(1000 * retryCount); // 指数退避
                         continue;
                     } else {
-                        System.err.println("tengu_tool_max_retries_reached: Max retries reached, giving up on task: " + task);
+                        logger.warn("Max retries reached, giving up on task: {}", task);
                     }
                 } else {
                     // 记录成功执行
-                    System.out.println("tengu_tool_execution_success: Task executed successfully after " + (retryCount + 1) + " attempts");
+                    logger.info("Task executed successfully after {} attempts", retryCount + 1);
                 }
                 
                 return result;
             } catch (InterruptedException ie) {
                 // 处理中断异常
-                System.err.println("tengu_tool_interrupted: Tool execution interrupted: " + ie.getMessage());
+                logger.warn("Tool execution interrupted: {}", ie.getMessage());
                 Thread.currentThread().interrupt();
                 return "Error: Tool execution interrupted";
             } catch (Exception e) {
                 lastException = e;
-                System.err.println("tengu_tool_exception: Exception during tool execution (attempt " + (retryCount + 1) + "): " + e.getMessage());
+                logger.warn("Exception during tool execution (attempt {}): {}", retryCount + 1, e.getMessage(), e);
                 
                 if (retryCount < maxRetries) {
                     retryCount++;
                     try {
-                        System.out.println("tengu_tool_retry_scheduled: Scheduling retry in " + (1000 * retryCount) + "ms due to exception");
+                        logger.info("Scheduling retry in {}ms due to exception", 1000 * retryCount);
                         Thread.sleep(1000 * retryCount); // 指数退避
                     } catch (InterruptedException ie) {
-                        System.err.println("tengu_tool_retry_interrupted: Retry interrupted: " + ie.getMessage());
+                        logger.warn("Retry interrupted: {}", ie.getMessage());
                         Thread.currentThread().interrupt();
                         break;
                     }
                 } else {
-                    System.err.println("tengu_tool_max_retries_reached: Max retries reached after exception, giving up on task: " + task);
+                    logger.warn("Max retries reached after exception, giving up on task: {}", task);
                     break;
                 }
             }
@@ -176,7 +185,7 @@ public class ToolEngine {
         
         String errorMessage = "Error executing tool after " + maxRetries + " retries: " + 
                (lastException != null ? lastException.getMessage() : "Unknown error");
-        System.err.println("tengu_tool_final_error: " + errorMessage);
+        logger.error("{}", errorMessage);
         return errorMessage;
     }
     
