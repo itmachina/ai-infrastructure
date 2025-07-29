@@ -20,12 +20,14 @@ public class MainAgentLoop {
     private final MemoryManager memoryManager;
     private final ToolEngine toolEngine;
     private final AtomicBoolean isAborted;
+    private int toolCallCount;
     
     public MainAgentLoop(MainAgent mainAgent, MemoryManager memoryManager, ToolEngine toolEngine) {
         this.mainAgent = mainAgent;
         this.memoryManager = memoryManager;
         this.toolEngine = toolEngine;
         this.isAborted = new AtomicBoolean(false);
+        this.toolCallCount = 0;
     }
     
     /**
@@ -159,6 +161,7 @@ public class MainAgentLoop {
                     logEvent("model_query_success", 
                         "model: " + currentModel + 
                         ", retryCount: " + retryCount +
+                        ", toolUses: " + toolCallCount +
                         ", wasCompacted: " + wasCompacted);
                     
                     return result;
@@ -198,7 +201,7 @@ public class MainAgentLoop {
             
             logEvent("query_error", 
                 "assistantMessages: " + assistantResponses.size() + 
-                ", toolUses: 0" +  // 简化实现
+                ", toolUses: " + toolCallCount +
                 ", retryCount: " + retryCount +
                 ", finalModel: " + currentModel);
             
@@ -351,6 +354,9 @@ public class MainAgentLoop {
      */
     private String executeToolFromPrompt(String prompt) {
         try {
+            // 增加工具调用计数
+            toolCallCount++;
+            
             // 调用工具引擎执行工具
             return toolEngine.executeTool(prompt);
         } catch (Exception e) {

@@ -1,4 +1,9 @@
-package com.ai.infrastructure.steering;
+package com.ai.infrastructure;
+
+import com.ai.infrastructure.steering.AsyncMessageQueue;
+import com.ai.infrastructure.steering.Command;
+import com.ai.infrastructure.steering.QueueMessage;
+import com.ai.infrastructure.steering.RealtimeSteeringSystem;
 
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;

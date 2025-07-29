@@ -59,7 +59,11 @@
       "Bash(mvn exec:java -Dexec.mainClass=\"com.ai.infrastructure.steering.StreamingMessageParserDebug\" -Dexec.classpathScope=\"test\")",
       "Bash(mvn test -Dtest=SimpleStreamingMessageParserTest)",
       "Bash(mvn test -Dtest=EnhancedStreamingProcessorTest)",
-      "Bash(mvn test -Dtest=EnhancedMainAgentLoopTest)"
+      "Bash(mvn test -Dtest=EnhancedMainAgentLoopTest)",
+      "Bash(mvn clean package:*)",
+      "Bash(mvn exec:java:*)",
+      "Bash(java:*)",
+      "Bash(mvn clean compile assembly:single:*)"
     ],
     "deny": []
   }

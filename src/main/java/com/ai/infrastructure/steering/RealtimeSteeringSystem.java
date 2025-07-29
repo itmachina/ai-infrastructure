@@ -9,6 +9,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 实时Steering系统的完整集成
@@ -101,8 +103,48 @@ public class RealtimeSteeringSystem implements AutoCloseable {
      * @return String
      */
     private String extractPromptContent(UserMessage message) {
-        // 简化实现，实际应该支持多种内容格式
-        return message.getContent().replace("\"", "");
+        Object content = message.getMessage().get("content");
+        
+        if (content == null) {
+            return "";
+        }
+        
+        // 处理不同类型的content
+        if (content instanceof String) {
+            // 字符串内容
+            return ((String) content).replace("\"", "");
+        } else if (content instanceof Map) {
+            // 对象内容，如 { "text": "message", "format": "markdown" }
+            Map<?, ?> contentMap = (Map<?, ?>) content;
+            if (contentMap.containsKey("text")) {
+                return contentMap.get("text").toString();
+            } else if (contentMap.containsKey("content")) {
+                return contentMap.get("content").toString();
+            } else {
+                // 返回整个对象的字符串表示
+                return content.toString();
+            }
+        } else if (content instanceof List) {
+            // 数组内容，如多个文本段
+            List<?> contentList = (List<?>) content;
+            StringBuilder result = new StringBuilder();
+            for (Object item : contentList) {
+                if (item instanceof Map) {
+                    Map<?, ?> itemMap = (Map<?, ?>) item;
+                    if (itemMap.containsKey("text")) {
+                        result.append(itemMap.get("text").toString()).append("\n");
+                    } else {
+                        result.append(item.toString()).append("\n");
+                    }
+                } else {
+                    result.append(item.toString()).append("\n");
+                }
+            }
+            return result.toString().trim();
+        } else {
+            // 其他类型，直接转换为字符串
+            return content.toString().replace("\"", "");
+        }
     }
     
     /**

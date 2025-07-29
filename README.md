@@ -144,7 +144,7 @@ mvn package
 mvn exec:java -Dexec.mainClass="com.ai.infrastructure.Main"
 
 # 运行实时Steering演示
-mvn exec:java -Dexec.mainClass="com.ai.infrastructure.steering.RealtimeSteeringDemo"
+mvn exec:java -Dexec.mainClass="com.ai.infrastructure.RealtimeSteeringDemo"
 ```
 
 ## 技术栈

@@ -25,6 +25,7 @@ public class SubAgent extends BaseAgent {
     private final int maxToolCalls;
     private final int maxExecutionTimeMs;
     private long startTime;
+    private int toolCallCount;
     
     public SubAgent(String agentId, String name) {
         super(agentId, name);
@@ -36,6 +37,7 @@ public class SubAgent extends BaseAgent {
         this.maxToolCalls = 50; // 默认最大工具调用次数
         this.maxExecutionTimeMs = 300000; // 默认最大执行时间5分钟
         this.startTime = 0;
+        this.toolCallCount = 0;
         
         // 初始化允许的工具列表（基于Claude Code的SubAgent工具白名单）
         initializeAllowedTools();
@@ -102,8 +104,6 @@ public class SubAgent extends BaseAgent {
      * @return 执行结果
      */
     private String executeTaskWithMonitoring(String task) {
-        int toolCallCount = 0;
-        
         try {
             // 检查执行时间限制
             if (System.currentTimeMillis() - startTime > maxExecutionTimeMs) {
@@ -174,6 +174,6 @@ public class SubAgent extends BaseAgent {
      * @return String
      */
     public String getToolCallStats() {
-        return "Tool calls: 1"; // 简化实现
+        return "Tool calls: " + toolCallCount;
     }
 }
