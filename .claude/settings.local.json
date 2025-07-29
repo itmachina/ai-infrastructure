@@ -63,7 +63,12 @@
       "Bash(mvn clean package:*)",
       "Bash(mvn exec:java:*)",
       "Bash(java:*)",
-      "Bash(mvn clean compile assembly:single:*)"
+      "Bash(mvn clean compile assembly:single:*)",
+      "WebFetch(domain:docs.iflow.cn)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
