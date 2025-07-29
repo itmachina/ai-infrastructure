@@ -155,12 +155,23 @@ public class ConversationManager {
                         } else {
                             return "Error: Invalid subagent action: missing task";
                         }
-                    case "complete":
-                        // 任务完成
+                    case "need_user_input":
+                        // 需要用户输入
+                        String userPrompt = responseJson.has("user_prompt") ? 
+                            responseJson.get("user_prompt").getAsString() : 
+                            "Please provide more information to proceed with this task.";
                         String content = responseJson.has("content") ? 
                             responseJson.get("content").getAsString() : 
+                            "I need more specific information to proceed with this task.";
+                        
+                        // 返回用户输入请求信号
+                        return "NEED_USER_INPUT:" + userPrompt + "\nCONTENT:" + content;
+                    case "complete":
+                        // 任务完成
+                        String contentComplete = responseJson.has("content") ? 
+                            responseJson.get("content").getAsString() : 
                             response;
-                        return "COMPLETE:" + content;
+                        return "COMPLETE:" + contentComplete;
                     default:
                         // 默认情况，直接返回响应
                         return response;
@@ -216,15 +227,17 @@ public class ConversationManager {
                "1. Complete (complete): When a task can be completed in one step\n" +
                "2. Continue (continue): When a task requires multiple steps\n" +
                "3. Tool Call (tool_call): When you need to use a specific tool\n" +
-               "4. Sub-Agent (subagent): When a task is very complex and requires specialized handling\n\n" +
+               "4. Sub-Agent (subagent): When a task is very complex and requires specialized handling\n" +
+               "5. Need User Input (need_user_input): When you need specific information from the user to proceed\n\n" +
                "Please respond in JSON format with the following fields:\n" +
                "{\n" +
-               "  \"action\": \"complete|continue|tool_call|subagent\",\n" +
+               "  \"action\": \"complete|continue|tool_call|subagent|need_user_input\",\n" +
                "  \"content\": \"Your response content\",\n" +
                "  \"next_step\": \"What to do next (only provide when action is continue)\",\n" +
                "  \"tool_name\": \"Tool name (only provide when action is tool_call)\",\n" +
                "  \"tool_params\": \"Tool parameters (only provide when action is tool_call)\",\n" +
-               "  \"task\": \"Sub-agent task (only provide when action is subagent)\"\n" +
+               "  \"task\": \"Sub-agent task (only provide when action is subagent)\",\n" +
+               "  \"user_prompt\": \"Specific question to ask the user (only provide when action is need_user_input)\"\n" +
                "}\n\n" +
                "Available tools:\n" +
                "- read: Read file contents\n" +
@@ -234,7 +247,8 @@ public class ConversationManager {
                "- calculate: Mathematical calculations\n\n" +
                "When using tools, be specific about what you're trying to accomplish and provide clear parameters.\n" +
                "For complex tasks, break them down into smaller steps and execute them one by one.\n" +
-               "Always consider security and only use tools that are appropriate for the task at hand.\n\n" +
+               "Always consider security and only use tools that are appropriate for the task at hand.\n" +
+               "When you need specific information from the user, use the 'need_user_input' action with a clear and concise question.\n\n" +
                "Examples:\n" +
                "{\n" +
                "  \"action\": \"complete\",\n" +
@@ -255,6 +269,11 @@ public class ConversationManager {
                "  \"action\": \"subagent\",\n" +
                "  \"content\": \"This task is very complex and requires creating a sub-agent to handle it specifically.\",\n" +
                "  \"task\": \"Design a complete project plan, including requirements analysis, system design, development phases, and testing strategies\"\n" +
+               "}\n\n" +
+               "{\n" +
+               "  \"action\": \"need_user_input\",\n" +
+               "  \"content\": \"I need more specific information to proceed with this task.\",\n" +
+               "  \"user_prompt\": \"What specific functionality would you like to implement in this project?\"\n" +
                "}\n\n" +
                "{\n" +
                "  \"action\": \"tool_call\",\n" +
