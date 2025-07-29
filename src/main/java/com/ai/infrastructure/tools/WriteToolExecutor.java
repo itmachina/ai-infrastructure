@@ -25,18 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WriteToolExecutor implements ToolExecutor {
     private final Gson gson;
     private static final Map<String, FileState> readFileState = new ConcurrentHashMap<>();
-    
-    // 需要用户输入的关键词列表（中英文）
-    private static final String[] USER_INPUT_KEYWORDS = {
-        "请提供", "需要您", "请输入", "请告诉我", "请说明", 
-        "具体信息", "详细信息", "更多信息", "补充信息",
-        "项目需求", "具体要求", "详细要求", "需求说明",
-        "文件内容", "代码内容", "文本内容",
-        "please provide", "need you to", "please input", "please tell me", "please specify",
-        "specific information", "detailed information", "more information", "additional information",
-        "project requirements", "specific requirements", "detailed requirements", "requirements specification",
-        "file content", "code content", "text content"
-    };
+
     
     public WriteToolExecutor() {
         this.gson = new Gson();
