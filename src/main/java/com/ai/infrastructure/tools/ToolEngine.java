@@ -15,6 +15,7 @@ import java.util.ArrayList;
 public class ToolEngine {
     private Map<String, ToolExecutor> registeredTools;
     private SecurityManager securityManager;
+    private Map<String, Object> executionContext;
     
     // 工具替代强制机制 - 禁止使用的传统命令
     private static final String[] FORBIDDEN_COMMANDS = {"find", "grep", "cat", "head", "tail", "ls"};
@@ -22,6 +23,7 @@ public class ToolEngine {
     public ToolEngine() {
         this.registeredTools = new HashMap<>();
         this.securityManager = new SecurityManager();
+        this.executionContext = new HashMap<>();
         registerDefaultTools();
     }
     
@@ -38,6 +40,7 @@ public class ToolEngine {
     
     /**
      * 执行工具 - 实现完整的6阶段执行流程
+     * 基于Claude Code的安全执行机制优化
      * @param task 任务描述
      * @return 执行结果
      */
@@ -49,23 +52,31 @@ public class ToolEngine {
                 // 检查是否尝试使用被禁止的命令
                 String forbiddenCommand = checkForbiddenCommands(task);
                 if (forbiddenCommand != null) {
+                    System.err.println("tengu_forbidden_command: Forbidden command detected: " + forbiddenCommand);
                     return "Error: Command '" + forbiddenCommand + "' is not allowed. Please use the appropriate tool instead.";
                 }
+                System.err.println("tengu_unknown_tool: Unknown tool for task: " + task);
                 return "Unknown tool for task: " + task;
             }
             
+            // 记录工具执行开始
+            System.out.println("tengu_tool_execution_start: Starting execution of tool '" + toolName + "' with task: " + task);
+            
             // 阶段2: 输入验证 (Zod Schema风格验证)
             if (!validateInput(task)) {
+                System.err.println("tengu_input_validation_failed: Input validation failed for task: " + task);
                 return "Input validation failed for task: " + task;
             }
             
             // 阶段3: 权限检查与门控
             if (!checkPermissions(toolName, task)) {
+                System.err.println("tengu_permission_denied: Permission denied for tool: " + toolName);
                 return "Permission denied for tool: " + toolName;
             }
             
             // 阶段4: 取消检查 (AbortController风格)
             if (isCancelled()) {
+                System.out.println("tengu_task_cancelled: Task was cancelled");
                 return "Task was cancelled";
             }
             
@@ -74,13 +85,99 @@ public class ToolEngine {
             String result = executor.execute(task);
             
             // 阶段6: 结果格式化与清理
-            return formatResult(result);
+            String formattedResult = formatResult(result);
+            
+            // 记录工具执行成功
+            System.out.println("tengu_tool_execution_success: Tool '" + toolName + "' executed successfully");
+            
+            return formattedResult;
             
         } catch (Exception e) {
             // 记录工具执行错误
             System.err.println("tengu_tool_execution_error: Tool execution failed - " + e.getMessage());
             return "Error executing tool: " + e.getMessage();
         }
+    }
+    
+    /**
+     * 基于Claude Code的工具执行增强实现 - 支持更安全的工具执行
+     * @param task 任务描述
+     * @param maxRetries 最大重试次数
+     * @return 执行结果
+     */
+    public String executeToolWithRetry(String task, int maxRetries) {
+        int retryCount = 0;
+        Exception lastException = null;
+        
+        // 记录任务开始执行
+        System.out.println("tengu_tool_execution_start: Starting execution of task: " + task);
+        
+        while (retryCount <= maxRetries) {
+            try {
+                // 记录当前尝试次数
+                if (retryCount > 0) {
+                    System.out.println("tengu_tool_retry: Retrying task (attempt " + (retryCount + 1) + " of " + (maxRetries + 1) + "): " + task);
+                }
+                
+                // 执行工具
+                String result = executeTool(task);
+                
+                // 检查结果是否包含错误
+                if (result.startsWith("Error:")) {
+                    // 记录错误信息
+                    System.err.println("tengu_tool_error: Tool execution returned error: " + result);
+                    
+                    // 如果是权限错误或安全错误，不重试
+                    if (result.contains("Permission denied") || result.contains("command_injection_detected")) {
+                        System.err.println("tengu_tool_critical_error: Critical error detected, stopping retries: " + result);
+                        return result;
+                    }
+                    
+                    // 如果是其他错误，可以重试
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        System.out.println("tengu_tool_retry_scheduled: Scheduling retry in " + (1000 * retryCount) + "ms");
+                        Thread.sleep(1000 * retryCount); // 指数退避
+                        continue;
+                    } else {
+                        System.err.println("tengu_tool_max_retries_reached: Max retries reached, giving up on task: " + task);
+                    }
+                } else {
+                    // 记录成功执行
+                    System.out.println("tengu_tool_execution_success: Task executed successfully after " + (retryCount + 1) + " attempts");
+                }
+                
+                return result;
+            } catch (InterruptedException ie) {
+                // 处理中断异常
+                System.err.println("tengu_tool_interrupted: Tool execution interrupted: " + ie.getMessage());
+                Thread.currentThread().interrupt();
+                return "Error: Tool execution interrupted";
+            } catch (Exception e) {
+                lastException = e;
+                System.err.println("tengu_tool_exception: Exception during tool execution (attempt " + (retryCount + 1) + "): " + e.getMessage());
+                
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    try {
+                        System.out.println("tengu_tool_retry_scheduled: Scheduling retry in " + (1000 * retryCount) + "ms due to exception");
+                        Thread.sleep(1000 * retryCount); // 指数退避
+                    } catch (InterruptedException ie) {
+                        System.err.println("tengu_tool_retry_interrupted: Retry interrupted: " + ie.getMessage());
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                } else {
+                    System.err.println("tengu_tool_max_retries_reached: Max retries reached after exception, giving up on task: " + task);
+                    break;
+                }
+            }
+        }
+        
+        String errorMessage = "Error executing tool after " + maxRetries + " retries: " + 
+               (lastException != null ? lastException.getMessage() : "Unknown error");
+        System.err.println("tengu_tool_final_error: " + errorMessage);
+        return errorMessage;
     }
     
     /**
@@ -317,5 +414,97 @@ public class ToolEngine {
      */
     public List<String> getRegisteredTools() {
         return new ArrayList<>(registeredTools.keySet());
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 设置执行上下文
+     * @param key 上下文键
+     * @param value 上下文值
+     */
+    public void setExecutionContext(String key, Object value) {
+        executionContext.put(key, value);
+        System.out.println("tengu_context_updated: Execution context updated with key: " + key);
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 获取执行上下文
+     * @param key 上下文键
+     * @return 上下文值
+     */
+    public Object getExecutionContext(String key) {
+        return executionContext.get(key);
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 获取所有执行上下文
+     * @return 所有上下文的副本
+     */
+    public Map<String, Object> getAllExecutionContext() {
+        return new HashMap<>(executionContext);
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 清除执行上下文
+     */
+    public void clearExecutionContext() {
+        executionContext.clear();
+        System.out.println("tengu_context_cleared: Execution context cleared");
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 上下文感知的工具执行
+     * @param task 任务描述
+     * @param maxRetries 最大重试次数
+     * @return 执行结果
+     */
+    public String executeToolWithContextAwareness(String task, int maxRetries) {
+        // 记录上下文信息
+        System.out.println("tengu_context_aware_execution: Starting context-aware execution with context: " + executionContext);
+        
+        // 根据上下文调整任务
+        String adjustedTask = adjustTaskBasedOnContext(task);
+        
+        // 执行工具
+        String result = executeToolWithRetry(adjustedTask, maxRetries);
+        
+        // 根据结果更新上下文
+        updateContextBasedOnResult(result);
+        
+        return result;
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 根据上下文调整任务
+     * @param task 原始任务
+     * @return 调整后的任务
+     */
+    private String adjustTaskBasedOnContext(String task) {
+        // 如果上下文中包含工作目录信息，则添加到任务中
+        Object workingDir = executionContext.get("workingDirectory");
+        if (workingDir != null && !task.contains("directory:")) {
+            task = task + " (in directory: " + workingDir + ")";
+        }
+        
+        // 如果上下文中包含用户偏好，则添加到任务中
+        Object userPreference = executionContext.get("userPreference");
+        if (userPreference != null) {
+            task = task + " (with preference: " + userPreference + ")";
+        }
+        
+        System.out.println("tengu_task_adjusted: Task adjusted based on context: " + task);
+        return task;
+    }
+    
+    /**
+     * 基于Claude Code的AU2函数实现 - 根据结果更新上下文
+     * @param result 执行结果
+     */
+    private void updateContextBasedOnResult(String result) {
+        // 这里可以添加根据执行结果更新上下文的逻辑
+        // 例如，如果执行了文件读取操作，可以更新最近访问的文件列表
+        if (result != null && result.contains("File content:")) {
+            executionContext.put("lastFileAccessed", System.currentTimeMillis());
+            System.out.println("tengu_context_updated: Updated last file access time in context");
+        }
     }
 }

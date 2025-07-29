@@ -244,6 +244,48 @@ public class SecurityManager {
             }
         }
         
+        // 基于Claude Code的uJ1函数增强实现 - 更严格的命令前缀检测
+        // 检查是否包含潜在的命令注入模式
+        if (containsCommandInjectionPattern(command)) {
+            logSecurityEvent("command_injection_detected", 
+                "Advanced command injection pattern detected");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 基于Claude Code的uJ1函数实现增强的命令注入模式检测
+     * @param command 命令字符串
+     * @return 是否包含命令注入模式
+     */
+    private boolean containsCommandInjectionPattern(String command) {
+        // 检查复杂命令注入模式
+        String[] injectionPatterns = {
+            "\\$\\(.*\\)",           // $() 命令替换
+            "`[^`]*`",               // 反引号命令替换
+            "\\{[^}]*\\}",           // 大括号扩展
+            "\\$\\{[^}]*\\}",        // 变量替换
+            "\\$[^\\s]*\\(.*\\)",    // 变量函数调用
+            ";[^;]*;",               // 多重命令分隔
+            "\\|\\s*[^|]*\\|",       // 多重管道
+            "&&\\s*[^&]*&&",         // 多重逻辑与
+            "\\|\\|\\s*[^|]*\\|\\|"  // 多重逻辑或
+        };
+        
+        for (String pattern : injectionPatterns) {
+            if (command.matches(".*" + pattern + ".*")) {
+                return true;
+            }
+        }
+        
+        // 检查危险的环境变量操作
+        if (command.contains("export ") && 
+            (command.contains("PATH=") || command.contains("LD_LIBRARY_PATH="))) {
+            return true;
+        }
+        
         return false;
     }
     

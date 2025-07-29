@@ -101,6 +101,7 @@ public class ConversationManager {
     
     /**
      * 处理模型的持续执行响应
+     * 基于Claude Code的智能工具使用机制优化
      * @param response 模型响应
      * @param toolEngine 工具引擎
      * @param openAIModelClient OpenAI模型客户端
@@ -120,30 +121,46 @@ public class ConversationManager {
                 switch (action) {
                     case "continue":
                         // 需要继续执行，返回继续信号
-                        return "CONTINUE:" + responseJson.get("next_step").getAsString();
+                        String nextStep = responseJson.has("next_step") ? 
+                            responseJson.get("next_step").getAsString() : 
+                            "Continue with the task";
+                        return "CONTINUE:" + nextStep;
                     case "tool_call":
                         // 调用工具
                         if (responseJson.has("tool_name") && responseJson.has("tool_params")) {
                             String toolName = responseJson.get("tool_name").getAsString();
                             String toolParams = responseJson.get("tool_params").getAsString();
-                            String toolResult = toolEngine.executeTool(toolName + " " + toolParams);
+                            String content = responseJson.has("content") ? 
+                                responseJson.get("content").getAsString() : 
+                                "Executing tool: " + toolName;
+                            
+                            // 使用带重试机制的工具执行
+                            String toolResult = toolEngine.executeToolWithRetry(toolName + " " + toolParams, 3);
                             
                             // 添加工具结果到历史记录
-                            addMessageToHistory("tool_result", toolResult);
+                            addMessageToHistory("tool_result", "Tool: " + toolName + "\nResult: " + toolResult);
                             
-                            return "TOOL_RESULT:" + toolResult;
+                            return "TOOL_RESULT:" + content + "\nTool execution result: " + toolResult;
+                        } else {
+                            return "Error: Invalid tool_call action: missing tool_name or tool_params";
                         }
-                        break;
                     case "subagent":
                         // 创建子Agent（这个逻辑需要在调用方处理）
                         if (responseJson.has("task")) {
                             String subagentTask = responseJson.get("task").getAsString();
-                            return "SUBAGENT:" + subagentTask;
+                            String content = responseJson.has("content") ? 
+                                responseJson.get("content").getAsString() : 
+                                "Creating sub-agent for complex task";
+                            return "SUBAGENT:" + content + "\nTask: " + subagentTask;
+                        } else {
+                            return "Error: Invalid subagent action: missing task";
                         }
-                        break;
                     case "complete":
                         // 任务完成
-                        return "COMPLETE:" + response;
+                        String content = responseJson.has("content") ? 
+                            responseJson.get("content").getAsString() : 
+                            response;
+                        return "COMPLETE:" + content;
                     default:
                         // 默认情况，直接返回响应
                         return response;
@@ -185,57 +202,65 @@ public class ConversationManager {
     
     /**
      * 构造系统消息，指导模型如何响应
+     * 基于Claude Code的系统提示词技巧优化
      * @return 系统消息
      */
     public String getSystemMessage() {
-        return "你是一个智能AI助手，需要根据任务要求决定如何响应。你可以选择以下几种行动：\n" +
-               "1. 直接回答 (complete): 当任务可以一次性完成时\n" +
-               "2. 继续执行 (continue): 当任务需要多步骤完成时\n" +
-               "3. 调用工具 (tool_call): 当需要使用特定工具时\n" +
-               "4. 创建子Agent (subagent): 当任务非常复杂需要专门处理时\n\n" +
-               "请以JSON格式回复，包含以下字段:\n" +
+        return "You are Claude Code, Anthropic's official CLI for Claude. " +
+               "You are an interactive CLI tool that helps users with software engineering tasks. " +
+               "IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously. " +
+               "Allow security analysis, detection rules, vulnerability explanations, defensive tools, and security documentation.\n\n" +
+               "You are a highly intelligent AI assistant designed to help users complete tasks by intelligently using various tools and services. " +
+               "Your goal is to understand user requests and determine the best approach to complete them.\n\n" +
+               "You can choose from the following actions:\n" +
+               "1. Complete (complete): When a task can be completed in one step\n" +
+               "2. Continue (continue): When a task requires multiple steps\n" +
+               "3. Tool Call (tool_call): When you need to use a specific tool\n" +
+               "4. Sub-Agent (subagent): When a task is very complex and requires specialized handling\n\n" +
+               "Please respond in JSON format with the following fields:\n" +
                "{\n" +
                "  \"action\": \"complete|continue|tool_call|subagent\",\n" +
-               "  \"content\": \"你的回复内容\",\n" +
-               "  \"next_step\": \"下一步要做什么（仅在action为continue时提供）\",\n" +
-               "  \"tool_name\": \"工具名称（仅在action为tool_call时提供）\",\n" +
-               "  \"tool_params\": \"工具参数（仅在action为tool_call时提供）\",\n" +
-               "  \"task\": \"子Agent任务（仅在action为subagent时提供）\"\n" +
+               "  \"content\": \"Your response content\",\n" +
+               "  \"next_step\": \"What to do next (only provide when action is continue)\",\n" +
+               "  \"tool_name\": \"Tool name (only provide when action is tool_call)\",\n" +
+               "  \"tool_params\": \"Tool parameters (only provide when action is tool_call)\",\n" +
+               "  \"task\": \"Sub-agent task (only provide when action is subagent)\"\n" +
                "}\n\n" +
-               "可用工具列表:\n" +
-               "- read: 读取文件内容\n" +
-               "- write: 写入文件内容\n" +
-               "- search: 本地搜索\n" +
-               "- web_search: 网页搜索（需要互联网访问）\n" +
-               "- calculate: 数学计算\n\n" +
-               "示例:\n" +
+               "Available tools:\n" +
+               "- read: Read file contents\n" +
+               "- write: Write file contents\n" +
+               "- search: Local search\n" +
+               "- web_search: Web search (requires internet access)\n" +
+               "- calculate: Mathematical calculations\n\n" +
+               "When using tools, be specific about what you're trying to accomplish and provide clear parameters.\n" +
+               "For complex tasks, break them down into smaller steps and execute them one by one.\n" +
+               "Always consider security and only use tools that are appropriate for the task at hand.\n\n" +
+               "Examples:\n" +
                "{\n" +
                "  \"action\": \"complete\",\n" +
-               "  \"content\": \"这是问题的答案。\"\n" +
+               "  \"content\": \"This is the answer to the question.\"\n" +
                "}\n\n" +
                "{\n" +
                "  \"action\": \"continue\",\n" +
-               "  \"content\": \"我需要更多信息来完成这个任务。\",\n" +
-               "  \"next_step\": \"请提供项目的具体要求。\"\n" +
+               "  \"content\": \"I need more information to complete this task.\",\n" +
+               "  \"next_step\": \"Please provide the specific requirements of the project.\"\n" +
                "}\n\n" +
                "{\n" +
                "  \"action\": \"tool_call\",\n" +
-               "  \"content\": \"我需要读取一个文件来回答这个问题。\",\n" +
+               "  \"content\": \"I need to read a file to answer this question.\",\n" +
                "  \"tool_name\": \"read\",\n" +
                "  \"tool_params\": \"/path/to/file.txt\"\n" +
                "}\n\n" +
-               "示例3:\n" +
                "{\n" +
                "  \"action\": \"subagent\",\n" +
-               "  \"content\": \"这个任务很复杂，需要创建一个子Agent来专门处理。\",\n" +
-               "  \"task\": \"设计一个完整的项目计划，包括需求分析、系统设计、开发阶段和测试策略\"\n" +
+               "  \"content\": \"This task is very complex and requires creating a sub-agent to handle it specifically.\",\n" +
+               "  \"task\": \"Design a complete project plan, including requirements analysis, system design, development phases, and testing strategies\"\n" +
                "}\n\n" +
-               "示例4:\n" +
                "{\n" +
                "  \"action\": \"tool_call\",\n" +
-               "  \"content\": \"我需要进行网页搜索来获取最新信息。\",\n" +
+               "  \"content\": \"I need to perform a web search to get the latest information.\",\n" +
                "  \"tool_name\": \"web_search\",\n" +
-               "  \"tool_params\": \"2025年最新的人工智能技术发展趋势\"\n" +
+               "  \"tool_params\": \"Latest AI technology development trends in 2025\"\n" +
                "}";
     }
 }

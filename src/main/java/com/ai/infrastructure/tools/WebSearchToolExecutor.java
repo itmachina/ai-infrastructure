@@ -35,14 +35,25 @@ public class WebSearchToolExecutor implements ToolExecutor {
             String query = extractSearchQuery(task);
             
             if (query == null || query.trim().isEmpty()) {
+                System.err.println("tengu_web_search_error: Invalid search query");
                 return "Error: Invalid search query";
             }
+            
+            System.out.println("tengu_web_search_start: Starting web search for query: " + query);
             
             // 执行搜索
             String searchResults = performWebSearch(query);
             
+            // 检查搜索结果
+            if (searchResults.startsWith("Error:")) {
+                System.err.println("tengu_web_search_error: " + searchResults);
+                return searchResults;
+            }
+            
+            System.out.println("tengu_web_search_success: Web search completed successfully");
             return "Web search results for '" + query + "':\n" + searchResults;
         } catch (Exception e) {
+            System.err.println("tengu_web_search_exception: Exception during web search: " + e.getMessage());
             return "Error executing web search: " + e.getMessage();
         }
     }

@@ -37,34 +37,54 @@ public class ReadToolExecutor implements ToolExecutor {
             String filePath = extractFilePath(task);
             
             if (filePath == null || filePath.trim().isEmpty()) {
+                System.err.println("tengu_read_error: Invalid file path");
                 return "Error: Invalid file path";
             }
             
+            System.out.println("tengu_read_start: Starting to read file: " + filePath);
+            
             // 检查文件是否存在
             if (!Files.exists(Paths.get(filePath))) {
+                System.err.println("tengu_read_error: File not found: " + filePath);
                 return "Error: File not found: " + filePath;
             }
             
             // 根据文件扩展名确定文件类型并读取
             String fileExtension = getFileExtension(filePath).toLowerCase();
             
+            String result;
             switch (fileExtension) {
                 case ".json":
-                    return readJsonFile(filePath);
+                    result = readJsonFile(filePath);
+                    break;
                 case ".txt":
                 case ".md":
                 case ".markdown":
-                    return readTextFile(filePath);
+                    result = readTextFile(filePath);
+                    break;
                 case ".pdf":
-                    return readPdfFile(filePath);
+                    result = readPdfFile(filePath);
+                    break;
                 case ".xlsx":
                 case ".xls":
-                    return readExcelFile(filePath);
+                    result = readExcelFile(filePath);
+                    break;
                 default:
                     // 默认按文本文件处理
-                    return readTextFile(filePath);
+                    result = readTextFile(filePath);
+                    break;
             }
+            
+            // 检查读取结果
+            if (result.startsWith("Error:")) {
+                System.err.println("tengu_read_error: " + result);
+                return result;
+            }
+            
+            System.out.println("tengu_read_success: File read successfully: " + filePath);
+            return "File content from " + filePath + ":\n" + result;
         } catch (Exception e) {
+            System.err.println("tengu_read_exception: Exception during file read: " + e.getMessage());
             return "Error reading file: " + e.getMessage();
         }
     }
@@ -183,7 +203,7 @@ public class ReadToolExecutor implements ToolExecutor {
     private String readPdfFile(String filePath) throws IOException {
         try {
             // 使用PDFBox读取PDF文件
-            PDFdocument document = PDDocument.load(new File(filePath));
+            PDDocument document = PDDocument.load(new File(filePath));
             PDFTextStripper pdfStripper = new PDFTextStripper();
             
             String text = pdfStripper.getText(document);

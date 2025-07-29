@@ -4,6 +4,7 @@ import com.ai.infrastructure.tools.ToolEngine;
 import com.ai.infrastructure.model.OpenAIModelClient;
 import com.ai.infrastructure.agent.SubAgent;
 import com.ai.infrastructure.agent.AgentStatus;
+import com.ai.infrastructure.conversation.ConversationManager;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;

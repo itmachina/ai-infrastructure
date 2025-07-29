@@ -70,7 +70,13 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(mvn clean compile test:*)",
-      "Bash(mvn clean test:*)"
+      "Bash(mvn clean test:*)",
+      "Bash(mvn dependency:tree)",
+      "Bash(ls -la ~/.m2/repository/org/apache/poi/poi/4.1.2/)",
+      "Bash(ls -la ~/.m2/repository/org/apache/pdfbox/pdfbox/2.0.27/)",
+      "Bash(mvn clean compile)",
+      "Bash(rm -rf D:repocommons-codeccommons-codec1.13)",
+      "Bash(mvn -X clean compile)"
     ],
     "deny": []
   }

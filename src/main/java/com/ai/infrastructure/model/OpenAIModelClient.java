@@ -19,6 +19,7 @@ import java.util.ArrayList;
 /**
  * OpenAI风格大模型客户端
  * 独立封装的心流开放平台API调用客户端
+ * 基于Claude Code的yj函数实现增强的交互系统
  */
 public class OpenAIModelClient {
     private static final String API_URL = "https://apis.iflow.cn/v1/chat/completions";
@@ -32,6 +33,13 @@ public class OpenAIModelClient {
     private int maxTokens;
     private double temperature;
     
+    // 调用统计信息
+    private int totalCalls = 0;
+    private int successfulCalls = 0;
+    private int failedCalls = 0;
+    private long totalResponseTime = 0;
+    private int retryCountTotal = 0;
+    
     /**
      * 构造函数
      * @param apiKey API密钥
@@ -42,6 +50,13 @@ public class OpenAIModelClient {
         this.model = DEFAULT_MODEL;
         this.maxTokens = DEFAULT_MAX_TOKENS;
         this.temperature = DEFAULT_TEMPERATURE;
+        
+        // 初始化统计信息
+        this.totalCalls = 0;
+        this.successfulCalls = 0;
+        this.failedCalls = 0;
+        this.totalResponseTime = 0;
+        this.retryCountTotal = 0;
     }
     
     /**
@@ -80,7 +95,12 @@ public class OpenAIModelClient {
      * @return 模型响应
      */
     public String callModel(String prompt) {
-        return callModel(prompt, "你是一个专业的AI助手，基于Claude Code技术构建。");
+        // 基于Claude Code的核心身份声明
+        String systemMessage = "You are Claude Code, Anthropic's official CLI for Claude. " +
+                              "You are an interactive CLI tool that helps users with software engineering tasks. " +
+                              "IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously. " +
+                              "Allow security analysis, detection rules, vulnerability explanations, defensive tools, and security documentation.";
+        return callModel(prompt, systemMessage);
     }
     
     /**
@@ -90,31 +110,285 @@ public class OpenAIModelClient {
      * @return 模型响应
      */
     public String callModel(String prompt, String systemMessage) {
+        return callModelWithRetry(prompt, systemMessage, 3); // 默认重试3次
+    }
+    
+    /**
+     * 调用大模型（自定义系统消息，带重试机制）
+     * 基于Claude Code的工具执行增强实现
+     * 增强版本，提供更完善的错误处理和重试机制
+     * @param prompt 用户提示
+     * @param systemMessage 系统消息
+     * @param maxRetries 最大重试次数
+     * @return 模型响应
+     */
+    public String callModelWithRetry(String prompt, String systemMessage, int maxRetries) {
+        int retryCount = 0;
+        Exception lastException = null;
+        
+        // 更新调用统计
+        totalCalls++;
+        
+        // 记录模型调用开始
+        long startTime = System.currentTimeMillis();
+        System.out.println("tengu_model_call_start: Starting model call with prompt: " + prompt);
+        
+        // 检查API密钥
         if (apiKey == null || apiKey.isEmpty()) {
-            return "Error: OpenAI model API key not set";
+            String error = "Error: OpenAI model API key not set";
+            System.err.println("tengu_model_call_api_key_error: " + error);
+            failedCalls++;
+            return error;
         }
         
-        try {
-            // 构建消息列表
-            List<Map<String, String>> messages = new ArrayList<>();
-            
-            // 添加系统消息
-            Map<String, String> systemMsg = new HashMap<>();
-            systemMsg.put("role", "system");
-            systemMsg.put("content", systemMessage);
-            messages.add(systemMsg);
-            
-            // 添加用户消息
-            Map<String, String> userMsg = new HashMap<>();
-            userMsg.put("role", "user");
-            userMsg.put("content", prompt);
-            messages.add(userMsg);
-            
-            // 调用模型
-            return callModelWithMessages(messages);
-        } catch (Exception e) {
-            return "Error calling OpenAI model: " + e.getMessage();
+        while (retryCount <= maxRetries) {
+            try {
+                // 记录当前尝试次数
+                if (retryCount > 0) {
+                    System.out.println("tengu_model_call_retry: Retrying model call (attempt " + (retryCount + 1) + " of " + (maxRetries + 1) + ")");
+                    retryCountTotal++;
+                }
+                
+                // 构建消息列表
+                List<Map<String, String>> messages = new ArrayList<>();
+                
+                // 添加系统消息
+                Map<String, String> systemMsg = new HashMap<>();
+                systemMsg.put("role", "system");
+                systemMsg.put("content", systemMessage);
+                messages.add(systemMsg);
+                
+                // 添加用户消息
+                Map<String, String> userMsg = new HashMap<>();
+                userMsg.put("role", "user");
+                userMsg.put("content", prompt);
+                messages.add(userMsg);
+                
+                // 调用模型
+                String result = callModelWithMessages(messages);
+                
+                // 检查结果是否包含错误
+                if (result.startsWith("Error:")) {
+                    // 记录错误信息
+                    System.err.println("tengu_model_call_error: Model call returned error: " + result);
+                    
+                    // 根据错误类型决定是否重试
+                    ModelCallErrorType errorType = classifyError(result);
+                    switch (errorType) {
+                        case CRITICAL:
+                            System.err.println("tengu_model_call_critical_error: Critical error detected, stopping retries: " + result);
+                            failedCalls++;
+                            return result;
+                        case TRANSIENT:
+                            // 瞬时错误可以重试
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                long delay = calculateRetryDelay(retryCount, errorType);
+                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for transient error");
+                                Thread.sleep(delay);
+                                continue;
+                            } else {
+                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for transient error, giving up on model call");
+                                failedCalls++;
+                            }
+                            break;
+                        case RATE_LIMIT:
+                            // 速率限制错误需要更长的延迟
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                long delay = calculateRetryDelay(retryCount, errorType);
+                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for rate limit error");
+                                Thread.sleep(delay);
+                                continue;
+                            } else {
+                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for rate limit error, giving up on model call");
+                                failedCalls++;
+                            }
+                            break;
+                        case UNKNOWN:
+                            // 未知错误可以重试
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                long delay = calculateRetryDelay(retryCount, errorType);
+                                System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms for unknown error");
+                                Thread.sleep(delay);
+                                continue;
+                            } else {
+                                System.err.println("tengu_model_call_max_retries_reached: Max retries reached for unknown error, giving up on model call");
+                                failedCalls++;
+                            }
+                            break;
+                    }
+                } else {
+                    // 记录成功执行
+                    long endTime = System.currentTimeMillis();
+                    long responseTime = endTime - startTime;
+                    totalResponseTime += responseTime;
+                    successfulCalls++;
+                    
+                    System.out.println("tengu_model_call_success: Model call executed successfully after " + (retryCount + 1) + " attempts");
+                    System.out.println("tengu_model_call_stats: Response time=" + responseTime + "ms");
+                    return result;
+                }
+                
+                return result;
+            } catch (InterruptedException ie) {
+                // 处理中断异常
+                System.err.println("tengu_model_call_interrupted: Model call interrupted: " + ie.getMessage());
+                Thread.currentThread().interrupt();
+                failedCalls++;
+                return "Error: Model call interrupted";
+            } catch (Exception e) {
+                lastException = e;
+                System.err.println("tengu_model_call_exception: Exception during model call (attempt " + (retryCount + 1) + "): " + e.getMessage());
+                
+                // 根据异常类型决定是否重试
+                if (shouldRetryOnException(e) && retryCount < maxRetries) {
+                    retryCount++;
+                    retryCountTotal++;
+                    try {
+                        long delay = calculateRetryDelay(retryCount, ModelCallErrorType.UNKNOWN);
+                        System.out.println("tengu_model_call_retry_scheduled: Scheduling retry in " + delay + "ms due to exception");
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        System.err.println("tengu_model_call_retry_interrupted: Retry interrupted: " + ie.getMessage());
+                        Thread.currentThread().interrupt();
+                        failedCalls++;
+                        break;
+                    }
+                } else {
+                    System.err.println("tengu_model_call_max_retries_reached: Max retries reached after exception, giving up on model call");
+                    failedCalls++;
+                    break;
+                }
+            }
         }
+        
+        String errorMessage = "Error calling OpenAI model after " + maxRetries + " retries: " + 
+               (lastException != null ? lastException.getMessage() : "Unknown error");
+        System.err.println("tengu_model_call_final_error: " + errorMessage);
+        return errorMessage;
+    }
+    
+    /**
+     * 错误类型分类
+     */
+    private enum ModelCallErrorType {
+        CRITICAL,    // 关键错误，不应重试
+        TRANSIENT,   // 瞬时错误，可以重试
+        RATE_LIMIT,  // 速率限制错误
+        UNKNOWN      // 未知错误
+    }
+    
+    /**
+     * 分类错误类型
+     * @param error 错误消息
+     * @return 错误类型
+     */
+    private ModelCallErrorType classifyError(String error) {
+        String lowerError = error.toLowerCase();
+        
+        // 关键错误，不应重试
+        if (lowerError.contains("api key") || lowerError.contains("security") || 
+            lowerError.contains("unauthorized") || lowerError.contains("forbidden")) {
+            return ModelCallErrorType.CRITICAL;
+        }
+        
+        // 速率限制错误
+        if (lowerError.contains("rate limit") || lowerError.contains("too many requests") ||
+            lowerError.contains("429")) {
+            return ModelCallErrorType.RATE_LIMIT;
+        }
+        
+        // 瞬时错误
+        if (lowerError.contains("timeout") || lowerError.contains("connection") ||
+            lowerError.contains("network") || lowerError.contains("502") ||
+            lowerError.contains("503") || lowerError.contains("504")) {
+            return ModelCallErrorType.TRANSIENT;
+        }
+        
+        // 默认为未知错误
+        return ModelCallErrorType.UNKNOWN;
+    }
+    
+    /**
+     * 计算重试延迟
+     * 基于Claude Code的智能重试策略优化
+     * @param retryCount 重试次数
+     * @param errorType 错误类型
+     * @return 延迟时间（毫秒）
+     */
+    private long calculateRetryDelay(int retryCount, ModelCallErrorType errorType) {
+        // 基础延迟时间
+        long baseDelay = 1000;
+        
+        // 根据错误类型调整延迟
+        switch (errorType) {
+            case RATE_LIMIT:
+                // 速率限制错误需要更长的延迟，可能包含服务器建议的重试时间
+                baseDelay = 5000;
+                break;
+            case TRANSIENT:
+                // 瞬时错误使用指数退避
+                baseDelay = 1000;
+                break;
+            case UNKNOWN:
+                // 未知错误使用中等延迟
+                baseDelay = 2000;
+                break;
+            default:
+                baseDelay = 1000;
+        }
+        
+        // 指数退避 (2的幂次增长)
+        long delay = baseDelay * (1L << Math.min(retryCount - 1, 4)); // 最多16倍延迟
+        
+        // 添加随机抖动以避免惊群效应 (±25%的抖动)
+        double jitter = 0.75 + Math.random() * 0.5; // 0.75到1.25之间的随机数
+        delay = (long) (delay * jitter);
+        
+        // 根据错误类型进一步调整延迟
+        switch (errorType) {
+            case RATE_LIMIT:
+                // 对于速率限制错误，确保至少有5秒的延迟
+                delay = Math.max(delay, 5000);
+                break;
+            case CRITICAL:
+                // 关键错误不应该重试，但如果有，使用较短延迟
+                delay = Math.min(delay, 1000);
+                break;
+            case TRANSIENT:
+            case UNKNOWN:
+            default:
+                // 其他错误使用计算的延迟
+                break;
+        }
+        
+        // 限制最大延迟
+        long maxDelay = 60000; // 最多60秒
+        return Math.min(delay, maxDelay);
+    }
+    
+    /**
+     * 判断是否应该在异常情况下重试
+     * @param e 异常
+     * @return 是否应该重试
+     */
+    private boolean shouldRetryOnException(Exception e) {
+        // 网络相关异常可以重试
+        if (e instanceof java.net.SocketTimeoutException ||
+            e instanceof java.net.ConnectException ||
+            e instanceof java.net.UnknownHostException) {
+            return true;
+        }
+        
+        // IO异常可以重试
+        if (e instanceof java.io.IOException) {
+            return true;
+        }
+        
+        // 其他异常默认不重试
+        return false;
     }
     
     /**
@@ -173,6 +447,7 @@ public class OpenAIModelClient {
     
     /**
      * 发送API请求到OpenAI风格大模型
+     * 增强版本，添加超时控制和更详细的错误处理
      * @param requestBody 请求体
      * @return API响应
      * @throws Exception 网络或API错误
@@ -187,29 +462,102 @@ public class OpenAIModelClient {
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
         
-        // 发送请求体
-        String jsonInputString = gson.toJson(requestBody);
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
+        // 设置超时控制
+        connection.setConnectTimeout(30000); // 30秒连接超时
+        connection.setReadTimeout(60000);    // 60秒读取超时
         
-        // 读取响应
-        int responseCode = connection.getResponseCode();
-        if (responseCode != 200) {
-            throw new RuntimeException("API request failed with response code: " + responseCode);
-        }
-        
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
+        try {
+            // 发送请求体
+            String jsonInputString = gson.toJson(requestBody);
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
             }
+            
+            // 读取响应
+            int responseCode = connection.getResponseCode();
+            
+            // 根据响应码处理不同情况
+            if (responseCode == 200) {
+                // 成功响应
+                StringBuilder response = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                    String responseLine;
+                    while ((responseLine = br.readLine()) != null) {
+                        response.append(responseLine.trim());
+                    }
+                }
+                return response.toString();
+            } else {
+                // 错误响应
+                StringBuilder errorResponse = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String responseLine;
+                    while ((responseLine = br.readLine()) != null) {
+                        errorResponse.append(responseLine.trim());
+                    }
+                }
+                
+                // 根据响应码生成更详细的错误信息
+                String errorMessage = parseErrorResponse(responseCode, errorResponse.toString());
+                throw new RuntimeException("API request failed with response code: " + responseCode + ". " + errorMessage);
+            }
+        } catch (java.net.SocketTimeoutException e) {
+            throw new RuntimeException("API request timed out: " + e.getMessage());
+        } catch (java.net.ConnectException e) {
+            throw new RuntimeException("Failed to connect to API: " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException("API request failed: " + e.getMessage());
+        } finally {
+            connection.disconnect();
+        }
+    }
+    
+    /**
+     * 解析错误响应
+     * @param responseCode 响应码
+     * @param errorResponse 错误响应内容
+     * @return 解析后的错误信息
+     */
+    private String parseErrorResponse(int responseCode, String errorResponse) {
+        try {
+            JsonObject errorObject = JsonParser.parseString(errorResponse).getAsJsonObject();
+            if (errorObject.has("error") && !errorObject.get("error").isJsonNull()) {
+                JsonObject error = errorObject.getAsJsonObject("error");
+                if (error.has("message") && !error.get("message").isJsonNull()) {
+                    return error.get("message").getAsString();
+                }
+            }
+        } catch (Exception e) {
+            // 如果解析失败，返回原始错误响应
+            return "Error response: " + errorResponse;
         }
         
-        return response.toString();
+        // 默认返回响应码信息
+        switch (responseCode) {
+            case 400:
+                return "Bad Request - The request was invalid or cannot be served.";
+            case 401:
+                return "Unauthorized - API key is invalid or missing.";
+            case 403:
+                return "Forbidden - The request is understood but refused.";
+            case 404:
+                return "Not Found - The requested resource could not be found.";
+            case 429:
+                return "Too Many Requests - Rate limit exceeded.";
+            case 500:
+                return "Internal Server Error - Something went wrong on the server.";
+            case 502:
+                return "Bad Gateway - The server received an invalid response.";
+            case 503:
+                return "Service Unavailable - The server is temporarily unavailable.";
+            case 504:
+                return "Gateway Timeout - The server took too long to respond.";
+            default:
+                return "Unknown error with response code: " + responseCode;
+        }
     }
     
     /**
@@ -257,10 +605,38 @@ public class OpenAIModelClient {
     }
     
     /**
-     * 获取当前配置的温度参数
-     * @return 温度参数
+     * 获取模型调用统计信息
+     * @return 统计信息字符串
      */
-    public double getTemperature() {
-        return temperature;
+    public String getCallStatistics() {
+        StringBuilder stats = new StringBuilder();
+        stats.append("Model Call Statistics:\n");
+        stats.append("  Total calls: ").append(totalCalls).append("\n");
+        stats.append("  Successful calls: ").append(successfulCalls).append("\n");
+        stats.append("  Failed calls: ").append(failedCalls).append("\n");
+        stats.append("  Retry count total: ").append(retryCountTotal).append("\n");
+        
+        if (totalCalls > 0) {
+            double successRate = (double) successfulCalls / totalCalls * 100;
+            stats.append("  Success rate: ").append(String.format("%.2f", successRate)).append("%\n");
+        }
+        
+        if (successfulCalls > 0) {
+            long averageResponseTime = totalResponseTime / successfulCalls;
+            stats.append("  Average response time: ").append(averageResponseTime).append("ms\n");
+        }
+        
+        return stats.toString();
+    }
+    
+    /**
+     * 重置统计信息
+     */
+    public void resetStatistics() {
+        totalCalls = 0;
+        successfulCalls = 0;
+        failedCalls = 0;
+        totalResponseTime = 0;
+        retryCountTotal = 0;
     }
 }

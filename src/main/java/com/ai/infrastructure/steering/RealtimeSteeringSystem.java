@@ -3,6 +3,7 @@ package com.ai.infrastructure.steering;
 import com.ai.infrastructure.agent.MainAgent;
 import com.ai.infrastructure.tools.ToolEngine;
 import com.ai.infrastructure.memory.MemoryManager;
+import com.ai.infrastructure.steering.StreamingProcessor;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
