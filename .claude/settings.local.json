@@ -80,7 +80,8 @@
       "Bash(mvn test-compile)",
       "Bash(mvn test-compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.CoreFeaturesDemo\" -Dexec.classpathScope=\"test\")",
       "Bash(ls -la target/test-classes/com/ai/infrastructure/)",
-      "Bash(mvn test -Dtest=CoreFeaturesDemoTest)"
+      "Bash(mvn test -Dtest=CoreFeaturesDemoTest)",
+      "Bash(mvn test -Dtest=com.ai.infrastructure.tools.CalculateToolExecutorTest)"
     ],
     "deny": []
   }
