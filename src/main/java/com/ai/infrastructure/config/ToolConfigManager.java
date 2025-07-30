@@ -201,4 +201,46 @@ public class ToolConfigManager {
     public int getWebSearchToolMaxResults() {
         return getWebSearchToolConfig().get("maxResults").getAsInt();
     }
+    
+    /**
+     * 获取BashTool的最大命令长度
+     */
+    public int getBashToolMaxCommandLength() {
+        return getBashToolConfig().get("maxCommandLength").getAsInt();
+    }
+    
+    /**
+     * 获取BashTool的最大输出长度
+     */
+    public int getBashToolMaxOutputLength() {
+        return getBashToolConfig().get("maxOutputLength").getAsInt();
+    }
+    
+    /**
+     * 获取BashTool的最大错误输出长度
+     */
+    public int getBashToolMaxErrorOutputLength() {
+        return getBashToolConfig().get("maxErrorOutputLength").getAsInt();
+    }
+    
+    /**
+     * 获取BashTool的默认超时时间
+     */
+    public int getBashToolDefaultTimeout() {
+        return getBashToolConfig().get("defaultTimeout").getAsInt();
+    }
+    
+    /**
+     * 获取BashTool是否强制白名单
+     */
+    public boolean getBashToolEnforceWhitelist() {
+        return getBashToolConfig().get("enforceWhitelist").getAsBoolean();
+    }
+    
+    /**
+     * 获取BashTool配置
+     */
+    public JsonObject getBashToolConfig() {
+        return config.getAsJsonObject("bashTool");
+    }
 }

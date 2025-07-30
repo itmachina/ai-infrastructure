@@ -45,6 +45,7 @@ public class ToolEngine {
         registeredTools.put("calculate", new CalculateToolExecutor());
         registeredTools.put("web_search", new WebSearchToolExecutor());
         registeredTools.put("task", new TaskToolExecutor());
+        registeredTools.put("bash", new BashToolExecutor());
     }
     
     /**

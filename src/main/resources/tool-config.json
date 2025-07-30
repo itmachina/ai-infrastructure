@@ -25,5 +25,12 @@
   },
   "webSearchTool": {
     "maxResults": 10
+  },
+  "bashTool": {
+    "maxCommandLength": 2000,
+    "maxOutputLength": 10000,
+    "maxErrorOutputLength": 5000,
+    "defaultTimeout": 30,
+    "enforceWhitelist": true
   }
 }

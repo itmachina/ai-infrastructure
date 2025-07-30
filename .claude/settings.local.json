@@ -83,7 +83,8 @@
       "Bash(mvn test -Dtest=CoreFeaturesDemoTest)",
       "Bash(mvn test -Dtest=com.ai.infrastructure.tools.CalculateToolExecutorTest)",
       "Bash(mkdir:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
