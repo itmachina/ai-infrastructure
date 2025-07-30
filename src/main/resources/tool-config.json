@@ -1,0 +1,36 @@
+{
+  "readTool": {
+    "maxHtmlContentLength": 5000,
+    "maxTextContentLength": 10000,
+    "maxPdfContentLength": 5000,
+    "maxExcelRows": 50,
+    "truncateMessage": "... (content truncated due to length) ...",
+    "htmlTruncateMessage": "... (content truncated due to length) ...",
+    "excelTruncateMessage": "... (rows truncated due to length) ...",
+    "maxRawHtmlForError": 1000
+  },
+  "memoryManager": {
+    "maxInputLength": 800,
+    "maxOutputLength": 800,
+    "minWordLengthForFiltering": 4
+  },
+  "securityManager": {
+    "maxInputLength": 10000
+  },
+  "mainAgent": {
+    "maxTaskLength": 150
+  },
+  "toolEngine": {
+    "maxTaskLength": 10000
+  },
+  "webSearchTool": {
+    "maxResults": 10
+  },
+  "bashTool": {
+    "maxCommandLength": 2000,
+    "maxOutputLength": 10000,
+    "maxErrorOutputLength": 5000,
+    "defaultTimeout": 30,
+    "enforceWhitelist": true
+  }
+}

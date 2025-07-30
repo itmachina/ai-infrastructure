@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 实现安全的文件写入功能，包括强制读取验证、原子写入、备份恢复等机制
  */
 public class WriteToolExecutor implements ToolExecutor {
+    private static Logger logger = LoggerFactory.getLogger(WriteToolExecutor.class);
     private final Gson gson;
     private static final Map<String, FileState> readFileState = new ConcurrentHashMap<>();
 
@@ -508,8 +511,9 @@ public class WriteToolExecutor implements ToolExecutor {
         stateUpdate.addProperty("state_key", filePath);
         stateUpdate.addProperty("timestamp", System.currentTimeMillis());
         response.add("state_update", stateUpdate);
-        
-        return gson.toJson(response);
+        String json = gson.toJson(response);
+        logger.info("write file success:{}", json);
+        return json;
     }
     
     /**

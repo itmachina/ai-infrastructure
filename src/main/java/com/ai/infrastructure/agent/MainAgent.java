@@ -1,5 +1,6 @@
 package com.ai.infrastructure.agent;
 
+import com.ai.infrastructure.config.ToolConfigManager;
 import com.ai.infrastructure.conversation.ContinuousExecutionManager;
 import com.ai.infrastructure.memory.MemoryManager;
 import com.ai.infrastructure.model.OpenAIModelClient;
@@ -34,9 +35,13 @@ public class MainAgent extends BaseAgent {
     private final AtomicBoolean isAborted = new AtomicBoolean(false);
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     
+    // 配置管理器
+    private final ToolConfigManager configManager;
+    
     public MainAgent(String agentId, String name) {
         super(agentId, name);
         this.subAgents = new ArrayList<>();
+        this.configManager = ToolConfigManager.getInstance();
         initializeComponents();
     }
     
@@ -203,7 +208,7 @@ public class MainAgent extends BaseAgent {
         }
         
         // 长任务可能更复杂
-        if (task.length() > 150) {
+        if (task.length() > configManager.getMainAgentMaxTaskLength()) {
             return true;
         }
         

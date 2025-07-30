@@ -1,5 +1,7 @@
 package com.ai.infrastructure.security;
 
+import com.ai.infrastructure.config.ToolConfigManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,9 @@ public class SecurityManager {
     private boolean sandboxMode;
     private Set<String> allowedDirectories;
     
+    // 配置管理器
+    private final ToolConfigManager configManager;
+    
     public SecurityManager() {
         this.deniedPatterns = new HashSet<>();
         this.allowedPatterns = new HashSet<>();
@@ -53,6 +58,7 @@ public class SecurityManager {
         this.auditLog = new ArrayList<>();
         this.sandboxMode = true; // 默认启用沙箱模式
         this.allowedDirectories = new HashSet<>();
+        this.configManager = ToolConfigManager.getInstance();
         initializeSecurityRules();
         initializeDefaultPermissions();
     }
@@ -424,7 +430,7 @@ public class SecurityManager {
         }
         
         // 检查长度限制
-        if (input.length() > 10000) {
+        if (input.length() > configManager.getSecurityManagerMaxInputLength()) {
             logSecurityEvent("input_validation_failed", 
                 "Input too long: " + input.length() + " characters");
             return false;
