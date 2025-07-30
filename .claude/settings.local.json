@@ -84,7 +84,20 @@
       "Bash(mvn test -Dtest=com.ai.infrastructure.tools.CalculateToolExecutorTest)",
       "Bash(mkdir:*)",
       "Bash(rm:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mvn compile -X)",
+      "Bash(mvn compile -Dfile.encoding=UTF-8)",
+      "Bash(mvn test -Dtest=\"*EnhancedTaskTool*\" -q)",
+      "Bash(mvn dependency:resolve -q)",
+      "Bash(mvn test -Dtest=\"EnhancedTaskToolSimpleTest\" -q)",
+      "Bash(mvn test -Dtest=\"EnhancedTaskToolSimpleTest\" -DfailIfNoTests=false -q)",
+      "Bash(mvn compile -q)",
+      "Bash(mvn compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.scheduler.SmartTaskToolDemo\")",
+      "Bash(timeout 30 mvn exec:java -Dexec.mainClass=\"com.ai.infrastructure.scheduler.EnhancedTaskTool\" -Dexec.args=\"\")",
+      "Bash(timeout 30 mvn compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.scheduler.EnhancedTaskTool\" -Dexec.args=\"\")",
+      "Bash(timeout 45 mvn compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.scheduler.SmartTaskToolDemo\" -Dexec.args=\"\")",
+      "Bash(mvn test -Dtest=AgentTest -q)",
+      "Bash(mvn test-compile -q)"
     ],
     "deny": []
   }

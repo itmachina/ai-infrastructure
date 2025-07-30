@@ -159,45 +159,6 @@
                 </executions>
             </plugin>
 
-            <!-- Exec Maven Plugin for running the application -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <mainClass>com.ai.infrastructure.Main</mainClass>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>run-main</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.ai.infrastructure.Main</mainClass>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>run-demo</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.ai.infrastructure.example.ContinuousExecutionDemo</mainClass>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>run-core-features-demo</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.ai.infrastructure.CoreFeaturesDemo</mainClass>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- Maven Assembly Plugin for distribution -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
