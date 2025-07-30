@@ -1,5 +1,6 @@
 package com.ai.infrastructure.tools;
 
+import com.ai.infrastructure.config.ToolConfigManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
@@ -17,15 +18,17 @@ import java.util.ArrayList;
 
 /**
  * 网页搜索工具执行器
- * 支持百度搜索功能
+ * 支持必应搜索功能
  */
 public class WebSearchToolExecutor implements ToolExecutor {
-    private static final String SEARCH_API_URL = "https://www.baidu.com/s";
+    private static final String SEARCH_API_URL = "https://www.bing.com/search";
     
     private final Gson gson;
+    private final ToolConfigManager configManager;
     
     public WebSearchToolExecutor() {
         this.gson = new Gson();
+        this.configManager = ToolConfigManager.getInstance();
     }
     
     @Override
@@ -88,7 +91,7 @@ public class WebSearchToolExecutor implements ToolExecutor {
     private String performWebSearch(String query) throws Exception {
         // 构建搜索URL
         String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-        String url = SEARCH_API_URL + "?wd=" + encodedQuery + "&rn=5"; // 限制返回5个结果
+        String url = SEARCH_API_URL + "?q=" + encodedQuery + "&count=" + configManager.getWebSearchToolMaxResults() + "&ensearch=1&FORM=BESBTB"; // 限制返回结果数量
         
         // 创建HTTP连接
         URL searchUrl = new URL(url);
@@ -115,42 +118,42 @@ public class WebSearchToolExecutor implements ToolExecutor {
             }
         }
         
-        // 简单解析百度搜索结果页面
-        return parseBaiduSearchResults(response.toString());
+        // 简单解析必应搜索结果页面
+        return parseBingSearchResults(response.toString());
     }
     
     /**
-     * 解析百度搜索结果
+     * 解析必应搜索结果
      * @param htmlResponse HTML格式的搜索响应
      * @return 格式化的搜索结果
      */
-    private String parseBaiduSearchResults(String htmlResponse) {
+    private String parseBingSearchResults(String htmlResponse) {
         try {
             StringBuilder formattedResults = new StringBuilder();
             int resultCount = 0;
             
             // 查找搜索结果项
-            // 百度搜索结果通常包含在<h3 class="t">标签中
+            // 必应搜索结果通常包含在<li class="b_algo">标签中
             int pos = 0;
             while (resultCount < 5 && pos < htmlResponse.length()) {
-                // 查找<h3 class="t">标签
-                int h3Start = htmlResponse.indexOf("<h3 class=\"t\"", pos);
-                if (h3Start == -1) {
+                // 查找<li class="b_algo">标签
+                int liStart = htmlResponse.indexOf("<li class=\"b_algo\"", pos);
+                if (liStart == -1) {
                     break;
                 }
                 
-                // 查找对应的</h3>标签
-                int h3End = htmlResponse.indexOf("</h3>", h3Start);
-                if (h3End == -1) {
+                // 查找对应的</li>标签
+                int liEnd = htmlResponse.indexOf("</li>", liStart);
+                if (liEnd == -1) {
                     break;
                 }
                 
-                // 提取h3标签内的内容
-                String h3Content = htmlResponse.substring(h3Start, h3End + 5);
+                // 提取li标签内的内容
+                String liContent = htmlResponse.substring(liStart, liEnd + 5);
                 
                 // 提取链接和标题
-                String url = extractUrlFromH3(h3Content);
-                String title = extractTitleFromH3(h3Content);
+                String url = extractUrlFromBingResult(liContent);
+                String title = extractTitleFromBingResult(liContent);
                 
                 if (url != null && title != null && !url.isEmpty() && !title.isEmpty()) {
                     resultCount++;
@@ -160,7 +163,7 @@ public class WebSearchToolExecutor implements ToolExecutor {
                             resultCount, title, url));
                 }
                 
-                pos = h3End + 5;
+                pos = liEnd + 5;
             }
             
             if (resultCount == 0) {
@@ -175,30 +178,30 @@ public class WebSearchToolExecutor implements ToolExecutor {
     }
     
     /**
-     * 从h3标签中提取URL
-     * @param h3Content h3标签内容
+     * 从必应搜索结果中提取URL
+     * @param liContent li标签内容
      * @return URL
      */
-    public String extractUrlFromH3(String h3Content) {
+    public String extractUrlFromBingResult(String liContent) {
         try {
-            int hrefStart = h3Content.indexOf("href=\"");
+            // 查找 <a target="_blank" href="..." 这样的链接
+            int targetBlankIndex = liContent.indexOf("target=\"_blank\"");
+            if (targetBlankIndex == -1) {
+                return null;
+            }
+            
+            int hrefStart = liContent.indexOf("href=\"", targetBlankIndex);
             if (hrefStart == -1) {
                 return null;
             }
             
             hrefStart += 6; // 跳过"href=\""
-            int hrefEnd = h3Content.indexOf("\"", hrefStart);
+            int hrefEnd = liContent.indexOf("\"", hrefStart);
             if (hrefEnd == -1) {
                 return null;
             }
             
-            String url = h3Content.substring(hrefStart, hrefEnd);
-            // 百度链接可能需要解码
-            if (url.startsWith("http://www.baidu.com/link?url=")) {
-                // 这是一个重定向链接，实际应用中可能需要解析真实URL
-                return url;
-            }
-            
+            String url = liContent.substring(hrefStart, hrefEnd);
             return url;
         } catch (Exception e) {
             return null;
@@ -206,29 +209,36 @@ public class WebSearchToolExecutor implements ToolExecutor {
     }
     
     /**
-     * 从h3标签中提取标题
-     * @param h3Content h3标签内容
+     * 从必应搜索结果中提取标题
+     * @param liContent li标签内容
      * @return 标题
      */
-    public String extractTitleFromH3(String h3Content) {
+    public String extractTitleFromBingResult(String liContent) {
         try {
-            int aStart = h3Content.indexOf("<a ");
+            // 查找 <a target="_blank" href="..." 这样的链接
+            int targetBlankIndex = liContent.indexOf("target=\"_blank\"");
+            if (targetBlankIndex == -1) {
+                return null;
+            }
+            
+            // 向前查找<a标签的开始位置
+            int aStart = liContent.lastIndexOf("<a ", targetBlankIndex);
             if (aStart == -1) {
                 return null;
             }
             
-            int titleStart = h3Content.indexOf(">", aStart);
+            int titleStart = liContent.indexOf(">", aStart);
             if (titleStart == -1) {
                 return null;
             }
             
             titleStart += 1; // 跳过">"
-            int titleEnd = h3Content.indexOf("</a>", titleStart);
+            int titleEnd = liContent.indexOf("</a>", titleStart);
             if (titleEnd == -1) {
                 return null;
             }
             
-            return h3Content.substring(titleStart, titleEnd);
+            return liContent.substring(titleStart, titleEnd);
         } catch (Exception e) {
             return null;
         }

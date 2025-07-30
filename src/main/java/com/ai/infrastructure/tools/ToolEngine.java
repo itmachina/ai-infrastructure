@@ -1,5 +1,6 @@
 package com.ai.infrastructure.tools;
 
+import com.ai.infrastructure.config.ToolConfigManager;
 import com.ai.infrastructure.security.SecurityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,14 @@ public class ToolEngine {
     // 工具替代强制机制 - 禁止使用的传统命令
     private static final String[] FORBIDDEN_COMMANDS = {"find", "grep", "cat", "head", "tail", "ls"};
     
+    // 配置管理器
+    private final ToolConfigManager configManager;
+    
     public ToolEngine() {
         this.registeredTools = new HashMap<>();
         this.securityManager = new SecurityManager();
         this.executionContext = new HashMap<>();
+        this.configManager = ToolConfigManager.getInstance();
         registerDefaultTools();
     }
     
@@ -258,7 +263,7 @@ public class ToolEngine {
         }
         
         // 长度限制
-        if (task.length() > 10000) {
+        if (task.length() > configManager.getToolEngineMaxTaskLength()) {
             return false;
         }
         

@@ -1,5 +1,7 @@
 package com.ai.infrastructure.memory;
 
+import com.ai.infrastructure.config.ToolConfigManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,9 @@ public class MemoryManager {
     private final Map<String, String> fileCache;
     private static final int MAX_FILE_RESTORE_TOKENS = 50000;
     private static final int MAX_SINGLE_FILE_TOKENS = 10000;
+    
+    // 配置管理器
+    private final ToolConfigManager configManager;
 
     public MemoryManager() {
         this.shortTermMemory = new ArrayList<>();
@@ -44,6 +49,7 @@ public class MemoryManager {
         this.longTermMemory = new ConcurrentHashMap<>();
         this.fileCache = new ConcurrentHashMap<>();
         this.currentTokenUsage = 0;
+        this.configManager = ToolConfigManager.getInstance();
     }
 
     /**
@@ -558,7 +564,7 @@ public class MemoryManager {
             // 分析用户消息
             if (!input.isEmpty()) {
                 // 限制单个消息的长度以防止过长，但保留更多内容
-                String trimmedInput = input.length() > 800 ? input.substring(0, 800) : input;
+                String trimmedInput = input.length() > configManager.getMemoryManagerMaxInputLength() ? input.substring(0, configManager.getMemoryManagerMaxInputLength()) : input;
 
                 // 背景上下文
                 if (containsAnyKeyword(input, contextKeywords) && !addedContext.contains(trimmedInput)) {
@@ -600,7 +606,7 @@ public class MemoryManager {
             // 分析输出消息
             if (!output.isEmpty()) {
                 // 限制单个消息的长度以防止过长
-                String trimmedOutput = output.length() > 800 ? output.substring(0, 800) : output;
+                String trimmedOutput = output.length() > configManager.getMemoryManagerMaxOutputLength() ? output.substring(0, configManager.getMemoryManagerMaxOutputLength()) : output;
 
                 // 执行结果
                 if (containsAnyKeyword(output, resultKeywords) && !addedResults.contains(trimmedOutput)) {
@@ -779,8 +785,8 @@ public class MemoryManager {
                 if (!word.isEmpty() && word.matches("[a-zA-Z]+")) {
                     wordCount++;
                     // 估算子词数量（基于单词长度）
-                    if (word.length() > 4) {
-                        subwordCount += word.length() / 4;
+                    if (word.length() > configManager.getMemoryManagerMinWordLengthForFiltering()) {
+                        subwordCount += word.length() / configManager.getMemoryManagerMinWordLengthForFiltering();
                     }
                 }
             }
