@@ -49,9 +49,7 @@ public class EmailChannel implements InteractionChannel {
         }
         
         // 如果没有设置默认发件人，使用用户名
-        if (this.fromAddress == null || this.fromAddress.trim().isEmpty()) {
-            this.fromAddress = this.username;
-        }
+        // (this.fromAddress已经在第37行设置过了)
     }
     
     @Override

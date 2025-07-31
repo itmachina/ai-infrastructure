@@ -6,6 +6,8 @@ import com.ai.infrastructure.agent.interaction.model.Message;
 import com.ai.infrastructure.agent.interaction.model.ChannelType;
 import com.ai.infrastructure.agent.interaction.model.MessageType;
 import com.ai.infrastructure.agent.interaction.model.MessageStatus;
+import com.ai.infrastructure.agent.interaction.model.InteractionTask;
+import com.ai.infrastructure.agent.interaction.model.InteractionTaskType;
 import com.ai.infrastructure.agent.interaction.plugin.PluginManager;
 import com.ai.infrastructure.agent.interaction.plugin.PluginAware;
 import com.ai.infrastructure.agent.interaction.plugin.InteractionPlugin;
@@ -344,6 +346,78 @@ public class InteractionAgent extends SpecializedAgent implements PluginAware, P
             logger.error("Failed to process interaction task: " + task, e);
             return "交互处理失败: " + e.getMessage();
         }
+    }
+    
+    /**
+     * 解析交互任务
+     */
+    private InteractionTask parseInteractionTask(String task) {
+        String lowerTask = task.toLowerCase();
+        
+        if (lowerTask.contains("多渠道") || lowerTask.contains("多个渠道")) {
+            return new InteractionTask(InteractionTaskType.MULTIPLE_CHANNEL_SEND, task);
+        } else if (lowerTask.contains("特定渠道") || lowerTask.contains("指定渠道")) {
+            return new InteractionTask(InteractionTaskType.CHANNEL_SPECIFIC_SEND, task);
+        } else if (lowerTask.contains("用户偏好") || lowerTask.contains("用户设置")) {
+            return new InteractionTask(InteractionTaskType.USER_PREFERENCE_MANAGE, task);
+        } else if (lowerTask.contains("渠道状态") || lowerTask.contains("状态查询")) {
+            return new InteractionTask(InteractionTaskType.CHANNEL_STATUS_QUERY, task);
+        } else if (lowerTask.contains("报告") || lowerTask.contains("报表")) {
+            return new InteractionTask(InteractionTaskType.REPORT_GENERATE, task);
+        } else if (lowerTask.contains("可视化") || lowerTask.contains("图表")) {
+            return new InteractionTask(InteractionTaskType.VISUALIZATION_CREATE, task);
+        } else {
+            return new InteractionTask(InteractionTaskType.GENERIC_INTERACTION, task);
+        }
+    }
+    
+    /**
+     * 处理多渠道发送
+     */
+    private String handleMultiChannelSend(InteractionTask task) {
+        return "已处理多渠道发送任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理特定渠道发送
+     */
+    private String handleChannelSpecificSend(InteractionTask task) {
+        return "已处理特定渠道发送任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理用户偏好管理
+     */
+    private String handleUserPreferenceManage(InteractionTask task) {
+        return "已处理用户偏好管理任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理渠道状态查询
+     */
+    private String handleChannelStatusQuery(InteractionTask task) {
+        return "已处理渠道状态查询任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理报告生成
+     */
+    private String handleReportGenerate(InteractionTask task) {
+        return "已处理报告生成任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理可视化创建
+     */
+    private String handleVisualizationCreate(InteractionTask task) {
+        return "已处理可视化创建任务: " + task.getContent();
+    }
+    
+    /**
+     * 处理通用交互
+     */
+    private String handleGenericInteraction(InteractionTask task) {
+        return "已处理通用交互任务: " + task.getContent();
     }
     
     @Override

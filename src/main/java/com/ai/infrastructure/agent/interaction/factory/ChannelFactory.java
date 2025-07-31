@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 渠道工厂类
@@ -79,7 +80,13 @@ public class ChannelFactory {
             throw new IllegalArgumentException("DingTalk channel requires accessToken and robotCode");
         }
         
-        return new DingTalkChannel(accessToken, secret, robotCode, parameters);
+        // 创建一个包含所有必要信息的配置map
+        Map<String, Object> channelConfig = new HashMap<>(config);
+        channelConfig.put("accessToken", accessToken);
+        channelConfig.put("secret", secret);
+        channelConfig.put("robotCode", robotCode);
+        
+        return new DingTalkChannel("dingtalk", channelConfig);
     }
     
     /**
@@ -96,7 +103,14 @@ public class ChannelFactory {
             throw new IllegalArgumentException("WeChat channel requires appId and openId");
         }
         
-        return new WeChatChannel(appId, appSecret, accessToken, openId, parameters);
+        // 创建一个包含所有必要信息的配置map
+        Map<String, Object> channelConfig = new HashMap<>(config);
+        channelConfig.put("appid", appId);
+        channelConfig.put("secret", appSecret);
+        channelConfig.put("accessToken", accessToken);
+        channelConfig.put("openId", openId);
+        
+        return new WeChatChannel("wechat", channelConfig);
     }
     
     /**
@@ -114,7 +128,15 @@ public class ChannelFactory {
             throw new IllegalArgumentException("Email channel requires smtpHost and fromAddress");
         }
         
-        return new EmailChannel(smtpHost, smtpPort, username, password, fromAddress, parameters);
+        // 创建一个包含所有必要信息的配置map
+        Map<String, Object> channelConfig = new HashMap<>(config);
+        channelConfig.put("smtpHost", smtpHost);
+        channelConfig.put("smtpPort", smtpPort);
+        channelConfig.put("username", username);
+        channelConfig.put("password", password);
+        channelConfig.put("fromEmail", fromAddress);
+        
+        return new EmailChannel("email", channelConfig);
     }
     
     /**

@@ -184,13 +184,13 @@ public class WebSearchToolExecutor implements ToolExecutor {
      */
     public String extractUrlFromBingResult(String liContent) {
         try {
-            // 查找 <a target="_blank" href="..." 这样的链接
-            int targetBlankIndex = liContent.indexOf("target=\"_blank\"");
-            if (targetBlankIndex == -1) {
+            // 查找 <a href="..." target="_blank" 这样的链接 (href可能在target之前)
+            int aStart = liContent.indexOf("<a ");
+            if (aStart == -1) {
                 return null;
             }
             
-            int hrefStart = liContent.indexOf("href=\"", targetBlankIndex);
+            int hrefStart = liContent.indexOf("href=\"", aStart);
             if (hrefStart == -1) {
                 return null;
             }
@@ -215,19 +215,18 @@ public class WebSearchToolExecutor implements ToolExecutor {
      */
     public String extractTitleFromBingResult(String liContent) {
         try {
-            // 查找 <a target="_blank" href="..." 这样的链接
-            int targetBlankIndex = liContent.indexOf("target=\"_blank\"");
-            if (targetBlankIndex == -1) {
-                return null;
-            }
-            
-            // 向前查找<a标签的开始位置
-            int aStart = liContent.lastIndexOf("<a ", targetBlankIndex);
+            // 查找 <a href="..." target="_blank" 这样的链接
+            int aStart = liContent.indexOf("<a ");
             if (aStart == -1) {
                 return null;
             }
             
-            int titleStart = liContent.indexOf(">", aStart);
+            int hrefStart = liContent.indexOf("href=\"", aStart);
+            if (hrefStart == -1) {
+                return null;
+            }
+            
+            int titleStart = liContent.indexOf(">", hrefStart);
             if (titleStart == -1) {
                 return null;
             }

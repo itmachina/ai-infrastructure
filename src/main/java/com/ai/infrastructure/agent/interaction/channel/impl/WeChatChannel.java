@@ -19,7 +19,7 @@ public class WeChatChannel implements InteractionChannel {
     
     private final String appId;
     private final String appSecret;
-    private final String accessToken;
+    private String accessToken;
     private final String openId;
     private final Map<String, Object> parameters;
     private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
