@@ -25,7 +25,7 @@ public class MainAgentEnhancedTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        mainAgent = new MainAgent("test-agent", "Test Agent");
+        mainAgent = new MainAgent("test-agent", "Test Agent", System.getenv("AI_API_KEY"));
     }
 
     @Test
@@ -35,9 +35,7 @@ public class MainAgentEnhancedTest {
         
         // 验证初始状态下没有模型客户端
         assertNull(mainAgent.getOpenAIModelClient());
-        
-        // 设置模型客户端（模拟）
-        mainAgent.setOpenAIModelApiKey("test-api-key");
+
         assertNotNull(mainAgent.getOpenAIModelClient());
     }
 

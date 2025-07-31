@@ -4,11 +4,11 @@ import com.ai.infrastructure.agent.MainAgent;
 import com.ai.infrastructure.memory.MemoryManager;
 import com.ai.infrastructure.tools.ToolEngine;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Iterator;
 
 /**
  * 主Agent循环 - 使用CompletableFuture实现可中断的流式处理

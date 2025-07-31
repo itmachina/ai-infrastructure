@@ -26,7 +26,7 @@ public class RealtimeSteeringDemo {
         System.out.println();
         
         // 创建实时Steering系统
-        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem()) {
+        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem(System.getenv("AI_API_KEY"))) {
             system.start();
             
             // 创建输入处理线程

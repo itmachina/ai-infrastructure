@@ -1,13 +1,15 @@
 package com.ai.infrastructure.steering;
 
 import com.ai.infrastructure.agent.MainAgent;
-import com.ai.infrastructure.tools.ToolEngine;
 import com.ai.infrastructure.memory.MemoryManager;
-import org.junit.jupiter.api.Test;
+import com.ai.infrastructure.tools.ToolEngine;
 import org.junit.jupiter.api.DisplayName;
-import java.util.List;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -22,7 +24,7 @@ public class EnhancedMainAgentLoopTest {
         System.out.println("Starting testBasicExecuteLoop...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -50,7 +52,7 @@ public class EnhancedMainAgentLoopTest {
         System.out.println("Starting testStreamingExecuteLoop...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -89,7 +91,7 @@ public class EnhancedMainAgentLoopTest {
         System.out.println("Starting testMessageCompression...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -133,7 +135,7 @@ public class EnhancedMainAgentLoopTest {
         System.out.println("Starting testAbortHandling...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         

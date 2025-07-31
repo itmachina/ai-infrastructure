@@ -54,18 +54,15 @@ public class CoreFeaturesDemo {
         System.out.println("1. 主应用基本功能演示:");
         
         // 创建应用实例
-        AIInfrastructureApplication application = new AIInfrastructureApplication();
-        application.setOpenAIModelApiKey(System.getenv("AI_API_KEY"));
+        AIInfrastructureApplication application = new AIInfrastructureApplication(System.getenv("AI_API_KEY"));
         application.start();
 
         try {
             // 执行简单任务
-            CompletableFuture<String> task1 = application.executeTask("计算 10 + 5");
-            System.out.println("  任务1结果: " + task1.join());
+            application.executeTask("计算 10 + 5");
             
             // 执行复杂任务
-            CompletableFuture<String> task2 = application.executeTask("分析一个项目计划");
-            System.out.println("  任务2结果: " + task2.join());
+            application.executeTask("分析一个项目计划");
             
         } catch (Exception e) {
             System.err.println("  执行任务时出错: " + e.getMessage());
@@ -82,7 +79,7 @@ public class CoreFeaturesDemo {
     private static void demonstrateRealtimeSteering() {
         System.out.println("2. 实时Steering系统演示:");
         
-        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem()) {
+        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem(System.getenv("AI_API_KEY"))) {
             system.start();
 
             // 发送一些命令
@@ -137,30 +134,5 @@ public class CoreFeaturesDemo {
         System.out.println("  内存管理操作完成");
         System.out.println();
     }
-    
-    /**
-     * 演示5: 多Agent协作
-     */
-    private static void demonstrateMultiAgentCollaboration() {
-        System.out.println("5. 多Agent协作演示:");
-        
-        MainAgent mainAgent = new MainAgent("demo-main", "Demo Main Agent");
-        mainAgent.setOpenAIModelApiKey(System.getenv("AI_API_KEY"));
-        // 执行任务，这将触发子Agent的创建
-        CompletableFuture<String> task = mainAgent.executeTask("开发一个复杂的功能模块");
-        
-        try {
-            String result = task.join();
-            System.out.println("  协作任务结果: " + result);
-            
-            // 显示子Agent信息
-            List<com.ai.infrastructure.agent.SubAgent> subAgents = mainAgent.getSubAgents();
-            System.out.println("  创建的子Agent数量: " + subAgents.size());
-            
-        } catch (Exception e) {
-            System.err.println("  协作任务执行出错: " + e.getMessage());
-        }
-        
-        System.out.println();
-    }
+
 }
