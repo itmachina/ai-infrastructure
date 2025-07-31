@@ -75,12 +75,12 @@ public class SecurityManager {
         deniedPatterns.add(".*chmod\\s*777.*");            // 权限修改
         deniedPatterns.add(".*chown\\s*root.*");           // 所有者修改
         deniedPatterns.add(".*sudo.*");                    // 提权命令
-        deniedPatterns.add(".*wget\\s*http.*");            // 网络下载
-        deniedPatterns.add(".*curl\\s*http.*");            // 网络请求
-        deniedPatterns.add(".*nc\\s*.*");                  // 网络连接
-        deniedPatterns.add(".*netcat\\s*.*");              // 网络连接
-        deniedPatterns.add(".*ssh\\s*.*");                 // SSH连接
-        deniedPatterns.add(".*telnet\\s*.*");              // Telnet连接
+        deniedPatterns.add(".*wget\\s*-O.*");              // 危险网络下载
+        deniedPatterns.add(".*curl\\s*-o.*");              // 危险网络请求
+        deniedPatterns.add(".*nc\\s*-e.*");                // 危险网络连接
+        deniedPatterns.add(".*netcat\\s*-e.*");            // 危险网络连接
+        deniedPatterns.add(".*ssh\\s*-i.*");               // 危险SSH连接
+        deniedPatterns.add(".*telnet\\s*.*\\s*.*");        // 危险Telnet连接
         deniedPatterns.add(".*\\$\\(.*\\).*");             // 命令替换
         deniedPatterns.add(".*`.*`.*");                    // 反引号执行
     }

@@ -1,9 +1,9 @@
 {
   "readTool": {
-    "maxHtmlContentLength": 5000,
-    "maxTextContentLength": 10000,
-    "maxPdfContentLength": 5000,
-    "maxExcelRows": 50,
+    "maxHtmlContentLength": 50000,
+    "maxTextContentLength": 100000,
+    "maxPdfContentLength": 50000,
+    "maxExcelRows": 500,
     "truncateMessage": "... (content truncated due to length) ...",
     "htmlTruncateMessage": "... (content truncated due to length) ...",
     "excelTruncateMessage": "... (rows truncated due to length) ...",

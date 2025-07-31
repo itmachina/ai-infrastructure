@@ -320,7 +320,7 @@ public class ToolEngine {
         // 检查危险命令组合
         String[] dangerousPatterns = {
             "rm -rf", "chmod 777", "chown root", "sudo", 
-            "wget http", "curl http", "nc ", "netcat"
+            "wget -O", "curl -o", "nc -e", "netcat -e"
         };
         
         String lowerCommand = command.toLowerCase();
