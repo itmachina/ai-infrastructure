@@ -24,7 +24,7 @@
     "maxTaskLength": 10000
   },
   "webSearchTool": {
-    "maxResults": 10
+    "maxResults": 100
   },
   "bashTool": {
     "maxCommandLength": 2000,

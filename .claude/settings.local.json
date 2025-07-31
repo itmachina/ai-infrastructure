@@ -98,7 +98,8 @@
       "Bash(timeout 45 mvn compile exec:java -Dexec.mainClass=\"com.ai.infrastructure.scheduler.SmartTaskToolDemo\" -Dexec.args=\"\")",
       "Bash(mvn test -Dtest=AgentTest -q)",
       "Bash(mvn test-compile -q)",
-      "Bash(mvn compile exec:java:*)"
+      "Bash(mvn compile exec:java:*)",
+      "Bash(mvn test:*)"
     ],
     "deny": []
   }

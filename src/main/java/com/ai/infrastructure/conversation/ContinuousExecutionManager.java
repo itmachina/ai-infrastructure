@@ -124,7 +124,7 @@ public class ContinuousExecutionManager {
             } else if (processedResponse.startsWith("TOOL_RESULT:")) {
                 // 工具执行结果，继续执行
                 String toolResult = processedResponse.substring(12); // 移除"TOOL_RESULT:"前缀
-                logger.info("TOOL_RESULT, nextStep:{}", toolResult);
+//                logger.info("TOOL_RESULT, nextStep:{}", toolResult);
                 return executeTaskStep("基于工具执行结果继续任务: " + toolResult);
             } else if (processedResponse.startsWith("SUBAGENT:")) {
                 // 需要创建子Agent并执行任务

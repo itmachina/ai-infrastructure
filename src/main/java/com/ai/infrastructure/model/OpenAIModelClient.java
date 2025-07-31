@@ -136,7 +136,7 @@ public class OpenAIModelClient {
         
         // 记录模型调用开始
         long startTime = System.currentTimeMillis();
-        logger.info("Starting model call with prompt: {}", prompt);
+//        logger.info("Starting model call with prompt: {}", prompt);
         
         // 检查API密钥
         if (apiKey == null || apiKey.isEmpty()) {
@@ -171,7 +171,7 @@ public class OpenAIModelClient {
                 
                 // 调用模型
                 String result = callModelWithMessages(messages);
-                
+                logger.info("Model call result: {}", result);
                 // 检查结果是否包含错误
                 if (result.startsWith("Error:")) {
                     // 记录错误信息

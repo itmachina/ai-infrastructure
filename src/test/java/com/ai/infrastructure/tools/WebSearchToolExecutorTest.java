@@ -5,7 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 网页搜索工具执行器测试类
+ * 学术搜索工具执行器测试类
  */
 public class WebSearchToolExecutorTest {
 
@@ -39,18 +39,18 @@ public class WebSearchToolExecutorTest {
     }
     
     @Test
-    public void testUrlExtraction() {
-        // 测试URL提取功能
-        String liContent = "<li class=\"b_algo\"><h2><a href=\"http://example.com\" target=\"_blank\">Example Title</a></h2></li>";
-        String url = webSearchToolExecutor.extractUrlFromBingResult(liContent);
-        assertEquals("http://example.com", url);
+    public void testTitleExtraction() {
+        // 测试标题提取功能
+        String entryContent = "<entry><title>Example Academic Paper</title></entry>";
+        String title = ((WebSearchToolExecutor) webSearchToolExecutor).extractTitleFromArxivEntry(entryContent);
+        assertEquals("Example Academic Paper", title);
     }
     
     @Test
-    public void testTitleExtraction() {
-        // 测试标题提取功能
-        String liContent = "<li class=\"b_algo\"><h2><a href=\"http://example.com\" target=\"_blank\">Example Title</a></h2></li>";
-        String title = webSearchToolExecutor.extractTitleFromBingResult(liContent);
-        assertEquals("Example Title", title);
+    public void testUrlExtraction() {
+        // 测试URL提取功能
+        String entryContent = "<entry><id>https://arxiv.org/abs/1234.56789</id></entry>";
+        String url = ((WebSearchToolExecutor) webSearchToolExecutor).extractUrlFromArxivEntry(entryContent);
+        assertEquals("https://arxiv.org/abs/1234.56789", url);
     }
 }
