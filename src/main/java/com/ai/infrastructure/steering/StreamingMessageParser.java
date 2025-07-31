@@ -7,12 +7,16 @@ import com.google.gson.JsonSyntaxException;
 import java.util.concurrent.CompletableFuture;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 流式消息解析器 - 将原始输入流解析为结构化消息
  * 基于Claude Code的g2A类实现，支持完整的JSON消息解析和严格类型验证
  */
 public class StreamingMessageParser implements AutoCloseable {
+    private static final Logger logger = LoggerFactory.getLogger(StreamingMessageParser.class);
     private final AsyncMessageQueue<String> inputStream;
     private final AsyncMessageQueue<UserMessage> outputStream;
     private volatile boolean isProcessing;
@@ -50,47 +54,73 @@ public class StreamingMessageParser implements AutoCloseable {
         
         try {
             while (!isClosed && !Thread.currentThread().isInterrupted()) {
-                CompletableFuture<QueueMessage<String>> readFuture = inputStream.read();
-                QueueMessage<String> message = readFuture.join();
-                
-                if (message.isDone()) {
-                    // 处理缓冲区中剩余的内容
-                    if (buffer.length() > 0) {
-                        String remaining = buffer.toString().trim();
-                        if (!remaining.isEmpty()) {
-                            UserMessage parsedMessage = parseLine(remaining);
+                // 使用非阻塞方式检查队列是否有消息
+                if (!inputStream.isEmpty()) {
+                    // 直接读取消息（非阻塞）
+                    CompletableFuture<QueueMessage<String>> readFuture = inputStream.read();
+                    try {
+                        // 设置超时避免无限阻塞
+                        QueueMessage<String> message = readFuture.get(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        logger.info("get message:{}", message);
+                        if (message.isDone()) {
+                            // 处理缓冲区中剩余的内容
+                            if (buffer.length() > 0) {
+                                String remaining = buffer.toString().trim();
+                                if (!remaining.isEmpty()) {
+                                    UserMessage parsedMessage = parseLine(remaining);
+                                    if (parsedMessage != null) {
+                                        outputStream.enqueue(parsedMessage);
+                                    }
+                                }
+                            }
+                            outputStream.complete();
+                            break;
+                        }
+                        
+                        String chunk = message.getValue();
+                        if (chunk == null) continue;
+                        
+                        buffer.append(chunk);
+                        
+                        // 按行分割处理
+                        int lineEndIndex;
+                        while ((lineEndIndex = buffer.indexOf("\n")) != -1) {
+                            String line = buffer.substring(0, lineEndIndex);
+                            buffer.delete(0, lineEndIndex + 1);
+                            
+                            UserMessage parsedMessage = parseLine(line);
                             if (parsedMessage != null) {
                                 outputStream.enqueue(parsedMessage);
                             }
                         }
+                    } catch (java.util.concurrent.TimeoutException e) {
+                        // 超时是正常的，继续循环
+                        continue;
+                    } catch (Exception e) {
+                        logger.error("Error reading from input stream: {}", e.getMessage());
+                        continue;
                     }
-                    outputStream.complete();
-                    break;
-                }
-                
-                String chunk = message.getValue();
-                if (chunk == null) continue;
-                
-                buffer.append(chunk);
-                
-                // 按行分割处理
-                int lineEndIndex;
-                while ((lineEndIndex = buffer.indexOf("\n")) != -1) {
-                    String line = buffer.substring(0, lineEndIndex);
-                    buffer.delete(0, lineEndIndex + 1);
-                    
-                    UserMessage parsedMessage = parseLine(line);
-                    if (parsedMessage != null) {
-                        outputStream.enqueue(parsedMessage);
+                } else {
+                    // 队列为空，短暂休眠避免CPU占用过高
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
                     }
                 }
             }
         } catch (Exception e) {
             if (!isClosed) {
+                logger.error("Error in processStream: {}", e.getMessage(), e);
                 outputStream.error(e);
             }
         } finally {
             isProcessing = false;
+            // 确保输出流完成
+            if (!outputStream.isCompleted()) {
+                outputStream.complete();
+            }
         }
     }
     
