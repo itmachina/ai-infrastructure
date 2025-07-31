@@ -12,12 +12,15 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 实时Steering系统的完整集成
  * 基于Claude Code的完整实现，支持消息流处理管道
  */
 public class RealtimeSteeringSystem implements AutoCloseable {
+    private static final Logger logger = LoggerFactory.getLogger(RealtimeSteeringSystem.class);
     private final AsyncMessageQueue<String> inputQueue;
     private final StreamingMessageParser messageParser;
     private final StreamingProcessor processor;
@@ -94,7 +97,7 @@ public class RealtimeSteeringSystem implements AutoCloseable {
             Command command = new Command("prompt", promptContent);
             processor.enqueueCommand(command);
         } catch (Exception e) {
-            System.err.println("Error processing input: " + e.getMessage());
+            logger.error("Error processing input: {}", e.getMessage(), e);
         }
     }
     
@@ -159,7 +162,7 @@ public class RealtimeSteeringSystem implements AutoCloseable {
             messageParser.close();
             inputQueue.complete();
             
-            System.out.println("Realtime Steering System aborted: " + reason);
+            logger.warn("Realtime Steering System aborted: {}", reason);
         }
     }
     
@@ -168,8 +171,8 @@ public class RealtimeSteeringSystem implements AutoCloseable {
      */
     public void start() {
         if (!isClosed.get()) {
-            System.out.println("Realtime Steering System started");
-            System.out.println("Ready for real-time interaction...");
+            logger.info("Realtime Steering System started");
+            logger.info("Ready for real-time interaction...");
         }
     }
     
@@ -184,9 +187,9 @@ public class RealtimeSteeringSystem implements AutoCloseable {
                 processor.close();
                 inputQueue.cleanup();
                 
-                System.out.println("Realtime Steering System closed");
+                logger.info("Realtime Steering System closed");
             } catch (Exception e) {
-                System.err.println("Error closing system: " + e.getMessage());
+                logger.error("Error closing system: {}", e.getMessage(), e);
             }
         }
     }

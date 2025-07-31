@@ -245,31 +245,30 @@ public class WebSearchToolExecutor implements ToolExecutor {
             SearchRequest request = parseSearchRequest(task);
             
             if (request.getQuery() == null || request.getQuery().trim().isEmpty()) {
-                System.err.println("tengu_web_search_error: Invalid search query");
+                logger.error("tengu_web_search_error: Invalid search query");
                 return "Error: Invalid search query";
             }
             
-            System.out.println("tengu_web_search_start: Starting web search for query: " + request.getQuery() + 
-                             " (domain: " + request.getDomain() + ", limit: " + request.getLimit() + 
-                             ", offset: " + request.getOffset() + 
-                             ", sortBy: " + request.getSortBy() + ", sortOrder: " + request.getSortOrder() + ")");
+            logger.info("tengu_web_search_start: Starting web search for query: {} (domain: {}, limit: {}, offset: {}, sortBy: {}, sortOrder: {})", 
+                    request.getQuery(), request.getDomain(), request.getLimit(), request.getOffset(), 
+                    request.getSortBy(), request.getSortOrder());
             
             // 执行搜索
             String searchResults = performWebSearch(request);
             
             // 检查搜索结果
             if (searchResults.startsWith("Error:")) {
-                System.err.println("tengu_web_search_error: " + searchResults);
+                logger.error("tengu_web_search_error: {}", searchResults);
                 return searchResults;
             }
             logger.info("web search result:{}", searchResults);
-            System.out.println("tengu_web_search_success: Web search completed successfully");
+            logger.info("tengu_web_search_success: Web search completed successfully");
             String domainInfo = "all".equals(request.getDomain()) ? "all domains" : request.getDomain() + " domain";
             return "Web search results for '" + request.getQuery() + "' in " + domainInfo + 
                    " (showing " + Math.min(request.getLimit(), getResultCount(searchResults)) + 
                    " results, sorted by " + request.getSortBy() + " " + request.getSortOrder() + "):\n" + searchResults;
         } catch (Exception e) {
-            System.err.println("tengu_web_search_exception: Exception during web search: " + e.getMessage());
+            logger.error("tengu_web_search_exception: Exception during web search: {}", e.getMessage(), e);
             return "Error executing web search: " + e.getMessage();
         }
     }

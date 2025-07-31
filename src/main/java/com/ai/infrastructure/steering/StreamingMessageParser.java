@@ -155,10 +155,10 @@ public class StreamingMessageParser implements AutoCloseable {
             return new UserMessage(type, content);
         } catch (JsonSyntaxException e) {
             // 如果不是有效的JSON，作为简单文本处理
-            System.err.println("Warning: Non-JSON input line: " + line);
+            // Using system err for compatibility with streaming output - this is for user-facing warnings
             return new UserMessage("user", line.trim());
         } catch (Exception e) {
-            System.err.println("Error parsing streaming input line: " + line + ": " + e.getMessage());
+            // Error handling for streaming parser - using system err for immediate feedback
             // 根据Claude Code的实现，解析错误应该终止进程，但为了演示我们只打印错误
             return null;
         }

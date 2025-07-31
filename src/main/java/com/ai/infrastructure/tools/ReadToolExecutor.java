@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 增强的读取工具执行器
@@ -32,6 +34,7 @@ import java.util.regex.Pattern;
  * 支持读取网络文档并转换为Markdown格式
  */
 public class ReadToolExecutor implements ToolExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(ReadToolExecutor.class);
     private final Gson gson;
     private final ToolConfigManager configManager;
     
@@ -47,11 +50,11 @@ public class ReadToolExecutor implements ToolExecutor {
             String filePath = extractFilePath(task);
             
             if (filePath == null || filePath.trim().isEmpty()) {
-                System.err.println("tengu_read_error: Invalid file path");
+                logger.error("tengu_read_error: Invalid file path");
                 return "Error: Invalid file path";
             }
             
-            System.out.println("tengu_read_start: Starting to read file: " + filePath);
+            logger.info("tengu_read_start: Starting to read file: {}", filePath);
             
             // 检查是否为URL
             if (isUrl(filePath)) {
@@ -60,17 +63,17 @@ public class ReadToolExecutor implements ToolExecutor {
                 
                 // 检查读取结果
                 if (result.startsWith("Error:")) {
-                    System.err.println("tengu_read_error: " + result);
+                    logger.error("tengu_read_error: {}", result);
                     return result;
                 }
                 
-                System.out.println("tengu_read_success: Network document read successfully: " + filePath);
+                logger.info("tengu_read_success: Network document read successfully: {}", filePath);
                 return "Network document content from " + filePath + ":\n" + result;
             } else {
                 // 处理本地文件
                 // 检查文件是否存在
                 if (!Files.exists(Paths.get(filePath))) {
-                    System.err.println("tengu_read_error: File not found: " + filePath);
+                    logger.error("tengu_read_error: File not found: {}", filePath);
                     return "Error: File not found: " + filePath;
                 }
                 
@@ -102,15 +105,15 @@ public class ReadToolExecutor implements ToolExecutor {
                 
                 // 检查读取结果
                 if (result.startsWith("Error:")) {
-                    System.err.println("tengu_read_error: " + result);
+                    logger.error("tengu_read_error: {}", result);
                     return result;
                 }
                 
-                System.out.println("tengu_read_success: File read successfully: " + filePath);
+                logger.info("tengu_read_success: File read successfully: {}", filePath);
                 return "File content from " + filePath + ":\n" + result;
             }
         } catch (Exception e) {
-            System.err.println("tengu_read_exception: Exception during file read: " + e.getMessage());
+            logger.error("tengu_read_exception: Exception during file read: {}", e.getMessage(), e);
             return "Error reading file: " + e.getMessage();
         }
     }

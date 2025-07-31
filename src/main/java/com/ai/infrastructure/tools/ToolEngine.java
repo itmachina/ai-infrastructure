@@ -270,7 +270,7 @@ public class ToolEngine {
         
         // 基于Claude Code的uJ1函数实现命令注入检测
         if (detectCommandInjection(task)) {
-            System.err.println("tengu_command_injection_detected: Command injection detected in task: " + task);
+            logger.error("tengu_command_injection_detected: Command injection detected in task: {}", task);
             return false;
         }
         
@@ -368,7 +368,7 @@ public class ToolEngine {
         String lowerTask = task.toLowerCase();
         if (lowerTask.contains("/etc/") || lowerTask.contains("/root/") || 
             lowerTask.contains("/bin/") || lowerTask.contains("/sbin/")) {
-            System.err.println("tengu_permission_denied: Attempt to write to system file denied");
+            logger.warn("tengu_permission_denied: Attempt to write to system file denied");
             return false;
         }
         
@@ -443,7 +443,7 @@ public class ToolEngine {
      */
     public void setExecutionContext(String key, Object value) {
         executionContext.put(key, value);
-        System.out.println("tengu_context_updated: Execution context updated with key: " + key);
+        logger.info("tengu_context_updated: Execution context updated with key: {}", key);
     }
     
     /**
@@ -468,7 +468,7 @@ public class ToolEngine {
      */
     public void clearExecutionContext() {
         executionContext.clear();
-        System.out.println("tengu_context_cleared: Execution context cleared");
+        logger.info("tengu_context_cleared: Execution context cleared");
     }
     
     /**
@@ -479,7 +479,7 @@ public class ToolEngine {
      */
     public String executeToolWithContextAwareness(String task, int maxRetries) {
         // 记录上下文信息
-        System.out.println("tengu_context_aware_execution: Starting context-aware execution with context: " + executionContext);
+        logger.info("tengu_context_aware_execution: Starting context-aware execution with context: {}", executionContext);
         
         // 根据上下文调整任务
         String adjustedTask = adjustTaskBasedOnContext(task);
@@ -511,7 +511,7 @@ public class ToolEngine {
             task = task + " (with preference: " + userPreference + ")";
         }
         
-        System.out.println("tengu_task_adjusted: Task adjusted based on context: " + task);
+        logger.info("tengu_task_adjusted: Task adjusted based on context: {}", task);
         return task;
     }
     
@@ -524,7 +524,7 @@ public class ToolEngine {
         // 例如，如果执行了文件读取操作，可以更新最近访问的文件列表
         if (result != null && result.contains("File content:")) {
             executionContext.put("lastFileAccessed", System.currentTimeMillis());
-            System.out.println("tengu_context_updated: Updated last file access time in context");
+            logger.info("tengu_context_updated: Updated last file access time in context");
         }
     }
 }
