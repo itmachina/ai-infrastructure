@@ -25,20 +25,9 @@ public class ContinuousExecutionManager {
     private AtomicInteger executionStep;
     private AtomicBoolean isExecuting;
     private Scanner scanner; // 用于从命令行读取用户输入
-    private static final int MAX_EXECUTION_STEPS = 10; // 最大执行步骤数
+    private static final int MAX_EXECUTION_STEPS = 20; // 最大执行步骤数
     
-    // 需要用户输入的关键词列表（中英文）
-    private static final String[] USER_INPUT_KEYWORDS = {
-        "请提供", "需要您", "请输入", "请告诉我", "请说明", "请上传", "请明确", "请确认",
-        "具体信息", "详细信息", "更多信息", "补充信息",
-        "项目需求", "具体要求", "详细要求", "需求说明",
-        "文件内容", "代码内容", "文本内容",
-        "please provide", "need you to", "please input", "please tell me", "please specify", "please upload",
-        "specific information", "detailed information", "more information", "additional information",
-        "project requirements", "specific requirements", "detailed requirements", "requirements specification",
-        "file content", "code content", "text content"
-    };
-    
+        
     public ContinuousExecutionManager(ToolEngine toolEngine, OpenAIModelClient openAIModelClient) {
         this.conversationManager = new ConversationManager();
         this.toolEngine = toolEngine;
@@ -104,30 +93,13 @@ public class ContinuousExecutionManager {
             
             // 根据处理结果决定下一步行动
             if (processedResponse.startsWith("CONTINUE:")) {
-                // 需要继续执行，智能判断是否需要用户输入
+                // 需要继续执行，默认不需要用户输入，直接继续执行
                 String nextStep = processedResponse.substring(9); // 移除"CONTINUE:"前缀
                 logger.info("CONTINUE, nextStep:{}", nextStep);
                 
-                // 检查是否真的需要用户输入新信息
-                // 如果nextStep包含特定关键词，才提示用户输入
-                if (needsUserInput(nextStep)) {
-                    // 提示用户输入更多信息
-                    System.out.println("AI需要更多信息来继续执行任务: " + nextStep);
-                    System.out.print("请输入您的回复: ");
-                    
-                    // 从命令行读取用户输入
-                    String userInput = scanner.nextLine();
-                    
-                    // 将用户输入添加到历史记录中
-                    conversationManager.addMessageToHistory("user", userInput);
-                    
-                    // 继续执行任务
-                    return executeTaskStep(userInput);
-                } else {
-                    // 不需要用户输入，直接继续执行
-                    logger.info("Continuing execution without user input: {}", nextStep);
-                    return executeTaskStep("基于上下文继续执行任务: " + nextStep);
-                }
+                // 直接继续执行，不提示用户输入
+                logger.info("Continuing execution without user input: {}", nextStep);
+                return executeTaskStep("基于上下文继续执行任务: " + nextStep);
             } else if (processedResponse.startsWith("NEED_USER_INPUT:")) {
                 // 模型明确要求用户输入
                 String needUserInputContent = processedResponse.substring(16); // 移除"NEED_USER_INPUT:"前缀
@@ -265,120 +237,4 @@ public class ContinuousExecutionManager {
         }
     }
     
-    /**
-     * 智能判断是否需要用户输入 - 改进版
-     * 基于上下文分析和模型意图识别，更准确地判断是否需要用户输入
-     * @param nextStep 下一步操作描述
-     * @return 是否需要用户输入
-     */
-    private boolean needsUserInput(String nextStep) {
-        // 转换为小写以便进行不区分大小写的匹配
-        String lowerNextStep = nextStep.toLowerCase();
-        
-        // 首先检查是否明确要求用户输入
-        for (String keyword : USER_INPUT_KEYWORDS) {
-            // 对于英文关键词，使用小写进行匹配
-            if (keyword.matches(".*[a-zA-Z].*")) {
-                if (lowerNextStep.contains(keyword.toLowerCase())) {
-                    // 进一步检查上下文，避免重复询问
-                    if (!isInformationAlreadyProvided(keyword)) {
-                        return true;
-                    }
                 }
-            } else {
-                // 对于中文关键词，使用原始大小写进行匹配
-                if (nextStep.contains(keyword)) {
-                    // 进一步检查上下文，避免重复询问
-                    if (!isInformationAlreadyProvided(keyword)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        // 检查是否是开放式问题（以问号结尾）
-        if (nextStep.trim().endsWith("?")) {
-            // 检查问题是否已经在历史记录中被回答过
-            if (!isQuestionAlreadyAnswered(nextStep)) {
-                return true;
-            }
-        }
-        
-        // 检查是否是确认类请求
-        if (isConfirmationRequest(nextStep)) {
-            return true;
-        }
-        
-        // 如果没有明确要求用户提供信息，则认为不需要用户输入
-        return false;
-    }
-    
-    /**
-     * 检查所需信息是否已经在对话历史中提供过
-     * @param keyword 关键词
-     * @return 是否已提供
-     */
-    private boolean isInformationAlreadyProvided(String keyword) {
-        // 检查对话历史中是否已经包含了相关信息
-        for (Map<String, String> message : conversationManager.getConversationHistory()) {
-            if ("user".equals(message.get("role"))) {
-                String content = message.get("content").toLowerCase();
-                if (content.contains(keyword.toLowerCase())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 检查问题是否已经在历史记录中被回答过
-     * @param question 问题
-     * @return 是否已回答
-     */
-    private boolean isQuestionAlreadyAnswered(String question) {
-        String lowerQuestion = question.toLowerCase().trim();
-        // 移除问号以便比较
-        if (lowerQuestion.endsWith("?")) {
-            lowerQuestion = lowerQuestion.substring(0, lowerQuestion.length() - 1);
-        }
-        
-        // 检查对话历史中是否已经有相关的问答
-        List<Map<String, String>> history = conversationManager.getConversationHistory();
-        for (int i = 0; i < history.size() - 1; i++) {
-            Map<String, String> message = history.get(i);
-            if ("user".equals(message.get("role"))) {
-                String content = message.get("content").toLowerCase().trim();
-                // 移除问号以便比较
-                if (content.endsWith("?")) {
-                    content = content.substring(0, content.length() - 1);
-                }
-                
-                // 检查问题是否相似
-                if (content.contains(lowerQuestion) || lowerQuestion.contains(content)) {
-                    // 检查下一个消息是否是助手的回答
-                    if (i + 1 < history.size()) {
-                        Map<String, String> nextMessage = history.get(i + 1);
-                        if ("assistant".equals(nextMessage.get("role")) || "tool_result".equals(nextMessage.get("role"))) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 判断是否是确认类请求
-     * @param nextStep 下一步操作描述
-     * @return 是否是确认类请求
-     */
-    private boolean isConfirmationRequest(String nextStep) {
-        String lowerNextStep = nextStep.toLowerCase();
-        return lowerNextStep.contains("确认") || lowerNextStep.contains("confirm") || 
-               lowerNextStep.contains("是否") || lowerNextStep.contains("是否同意") ||
-               lowerNextStep.contains("你觉得") || lowerNextStep.contains("你认为") ||
-               lowerNextStep.contains("do you think") || lowerNextStep.contains("what do you think");
-    }
-}
