@@ -33,7 +33,7 @@ public class MainAgent extends BaseAgent {
     private List<SubAgent> subAgents;
     private OpenAIModelClient openAIModelClient;
     private ContinuousExecutionManager continuousExecutionManager;
-
+    private SubAgentManager subAgentManager;
     private IntelligentAgentAllocator intelligentAgentAllocator;
 
     // 防止死循环的支持
@@ -69,6 +69,7 @@ public class MainAgent extends BaseAgent {
         this.memoryManager = new MemoryManager();
         this.securityManager = new SecurityManager();
         this.toolEngine = new ToolEngine();
+        this.subAgentManager = new SubAgentManager(this, memoryManager, toolEngine, securityManager);
 
         // 创建Agent池用于智能分配
         this.openAIModelClient = new OpenAIModelClient(apiKey);
@@ -454,6 +455,140 @@ public class MainAgent extends BaseAgent {
     }
 
     /**
+     * 协调和调度子Agent执行任务
+     *
+     * @param task 主任务
+     * @return 协作执行结果
+     */
+    public CompletableFuture<String> coordinateSubAgentTask(String task) {
+        logger.info("MainAgent coordinating sub-agent task: {}", task);
+
+        try {
+            // 任务分解
+            List<String> subTasks = decomposeTask(task);
+
+            if (subTasks.size() == 1) {
+                // 简单任务，直接创建单个子Agent
+                return createAndExecuteSingleSubAgent(task);
+            } else {
+                // 复杂任务，使用协作模式
+                return createAndExecuteCollaborativeTask(subTasks);
+            }
+        } catch (Exception e) {
+            logger.error("Error in sub-agent coordination: {}", e.getMessage(), e);
+            CompletableFuture<String> errorResult = new CompletableFuture<>();
+            errorResult.complete("Sub-agent coordination failed: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    /**
+     * 任务分解
+     */
+    private List<String> decomposeTask(String task) {
+        List<String> subTasks = new ArrayList<>();
+
+        // 简单的任务分解逻辑
+        String lowerTask = task.toLowerCase();
+
+        if (lowerTask.contains("analyze") && lowerTask.contains("implement")) {
+            subTasks.add("Analyze requirements: " + task);
+            subTasks.add("Implement solution: " + task);
+        } else if (lowerTask.contains("read") && lowerTask.contains("write")) {
+            subTasks.add("Read input: " + task);
+            subTasks.add("Process data: " + task);
+            subTasks.add("Write output: " + task);
+        } else {
+            subTasks.add(task); // 无法分解，作为单个任务
+        }
+
+        return subTasks;
+    }
+
+    /**
+     * 创建并执行单个子Agent
+     */
+    private CompletableFuture<String> createAndExecuteSingleSubAgent(String task) {
+        SubAgent subAgent = subAgentManager.createSubAgent(task, AgentType.GENERAL, getAgentId());
+        subAgents.add(subAgent);
+
+        return subAgent.executeTask(task)
+                .thenApply(result -> {
+                    subAgentManager.cleanupCompletedAgents();
+                    return "[SubAgent " + subAgent.getAgentId() + "]: " + result;
+                });
+    }
+
+    /**
+     * 创建并执行协作任务
+     */
+    private CompletableFuture<String> createAndExecuteCollaborativeTask(List<String> subTasks) {
+        // 确定协作策略
+        CoordinationStrategy strategy = determineCoordinationStrategy(subTasks);
+
+        // 创建协作Agent组
+        List<SubAgent> agentGroup = subAgentManager.createCollaborativeAgentGroup(subTasks, CollaborationType.PARALLEL);
+        subAgents.addAll(agentGroup);
+
+        // 执行协作任务
+        return subAgentManager.executeCollaborativeTask(agentGroup, strategy)
+                .thenApply(result -> {
+                    // 清理完成的Agent
+                    subAgentManager.cleanupCompletedAgents();
+
+                    // 更新内存
+                    memoryManager.updateContext("COLLABORATIVE_RESULT", result);
+
+                    return "[Collaborative Execution]\n" + result;
+                });
+    }
+
+    /**
+     * 确定协调策略
+     */
+    private CoordinationStrategy determineCoordinationStrategy(List<String> subTasks) {
+        if (subTasks.size() <= 2) {
+            return CoordinationStrategy.PARALLEL;
+        } else if (subTasks.stream().anyMatch(t -> t.contains("sequential"))) {
+            return CoordinationStrategy.SEQUENTIAL;
+        } else if (subTasks.stream().anyMatch(t -> t.contains("pipeline"))) {
+            return CoordinationStrategy.PIPELINE;
+        } else {
+            return CoordinationStrategy.ADAPTIVE;
+        }
+    }
+
+    /**
+     * 获取子Agent管理器
+     */
+    public SubAgentManager getSubAgentManager() {
+        return subAgentManager;
+    }
+
+    public MainAgent getMainAgent() {
+        return this;
+    }
+
+    /**
+     * 获取所有活跃子Agent的状态
+     */
+    public Map<String, Object> getSubAgentStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("activeAgents", subAgentManager.getActiveAgentIds());
+        status.put("agentStatuses", subAgentManager.getAgentStatuses());
+        status.put("subAgentStats", subAgentManager.getStats());
+        status.put("sharedData", subAgentManager.getAllSharedData());
+        return status;
+    }
+
+    /**
+     * 广播消息给所有子Agent
+     */
+    public void broadcastToSubAgents(String message) {
+        subAgentManager.broadcastMessage(getAgentId(), message);
+    }
+
+    /**
      * 获取资源使用信息
      *
      * @return String
@@ -463,7 +598,12 @@ public class MainAgent extends BaseAgent {
         usage.append("=== MainAgent Resource Usage ===\n");
         usage.append("MainAgent: ").append(getName()).append("\n");
         usage.append("Status: ").append(getStatus()).append("\n");
-        usage.append("SubAgents: ").append(subAgents.size()).append("\n");
+
+        SubAgentStats stats = subAgentManager.getStats();
+        usage.append("Active SubAgents: ").append(stats.getActiveAgents()).append("\n");
+        usage.append("Completed SubAgents: ").append(stats.getCompletedAgents()).append("\n");
+        usage.append("Total SubAgents Created: ").append(stats.getTotalAgentsCreated()).append("\n");
+        usage.append("Shared Data Items: ").append(stats.getSharedDataItems()).append("\n");
 
         // 组件状态信息
         usage.append("\n=== Component Status ===\n");
@@ -474,6 +614,7 @@ public class MainAgent extends BaseAgent {
         usage.append("OpenAI Model: ").append(openAIModelClient != null ? "Configured" : "Not Configured").append("\n");
         usage.append("Continuous Execution: ").append(continuousExecutionManager != null ? "Active" : "Inactive").append("\n");
         usage.append("Intelligent Allocator: ").append(intelligentAgentAllocator != null ? "Active" : "Inactive").append("\n");
+        usage.append("SubAgent Manager: ").append(subAgentManager != null ? "Active" : "Inactive").append("\n");
 
         // 添加内存管理信息
         if (memoryManager != null) {
@@ -481,17 +622,11 @@ public class MainAgent extends BaseAgent {
             usage.append(memoryManager.getMemoryInfo()).append("\n");
         }
 
-        // 添加任务统计信息
-        usage.append("\n=== Task Statistics ===\n");
-        usage.append("Total Tasks: ").append(subAgents.size() * 10).append(" (estimated)\n");
-        usage.append("Active Sub-agents: ").append(subAgents.size()).append("\n");
-        usage.append("AI Mode: Enhanced OpenAI Integration\n");
-        usage.append("Execution: Multi-component Pipeline\n");
-        usage.append("Memory Management: 3-layer Architecture\n");
-        usage.append("Security: 6-layer Protection\n");
-        usage.append("Processing: Real-time + Intelligent Allocation\n");
-        usage.append("Tools: Full Engine Integration\n");
-        usage.append("Agents: I2A, UH1, KN5 Auto-selection\n");
+        usage.append("\n=== System Architecture ===\n");
+        usage.append("Architecture: RealtimeSteering + MainAgentLoop + SubAgent Collaboration\n");
+        usage.append("Communication: AsyncMessageQueue + StreamingProcessor\n");
+        usage.append("Coordination: MainAgent -> SubAgentManager -> SubAgents\n");
+        usage.append("Data Exchange: Shared Data Space + Message Passing\n");
 
         return usage.toString();
     }

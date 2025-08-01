@@ -92,17 +92,32 @@
 
 ## 系统架构
 
+### 新架构设计
 ```
 AIInfrastructureApplication (应用入口)
-├── MainAgent (主Agent)
-│   ├── ContinuousExecutionManager (持续执行管理器)
-│   │   ├── ConversationManager (对话管理器)
-│   │   └── TaskScheduler (任务调度器)
-│   ├── ToolEngine (工具引擎)
-│   ├── MemoryManager (内存管理器)
-│   └── SecurityManager (安全管理器)
-└── SubAgent (子Agent)
+├── RealtimeSteeringSystem (实时转向系统)
+│   ├── AsyncMessageQueue (异步消息队列)
+│   ├── StreamingMessageParser (流式消息解析器)
+│   ├── StreamingProcessor (流式处理引擎)
+│   └── MainAgentLoop (主Agent循环)
+└── MainAgent (主Agent协调器)
+    ├── SubAgentManager (子Agent管理器)
+    │   ├── SubAgent协作组
+    │   ├── 共享数据空间
+    │   └── 消息传递系统
+    ├── IntelligentAgentAllocator (智能代理分配器)
+    ├── TaskScheduler (任务调度器)
+    ├── MemoryManager (内存管理器)
+    ├── ToolEngine (工具引擎)
+    └── SecurityManager (安全管理器)
 ```
+
+### 架构特点
+1. **RealtimeSteeringSystem**: 通过AsyncMessageQueue接受和转发任务
+2. **MainAgentLoop**: 负责循环管理MainAgent执行
+3. **MainAgent**: 协调和调度子Agent，支持任务分解和协作
+4. **SubAgent协作**: 子Agent之间可以相互协作并交换数据
+5. **共享数据空间**: 所有子Agent可以访问和共享数据
 
 ## 快速开始
 
@@ -150,6 +165,9 @@ mvn exec:java@run-demo -Dexec.args="YOUR_API_KEY_HERE"
 
 # 运行核心功能演示
 mvn exec:java@run-core-features-demo
+
+# 运行增强版协作系统演示
+mvn exec:java@run-collaboration-demo
 ```
 
 ## 配置选项
@@ -200,6 +218,8 @@ java -jar ai-infrastructure.jar YOUR_API_KEY_HERE
 - [OpenAI模型集成详细文档](docs/openai_model_integration.md)
 - [智能任务分发机制](docs/intelligent_task_dispatch.md)
 - [持续执行和对话管理](docs/continuous_execution_and_conversation_management.md)
+- [开发指南](DEVELOPMENT_GUIDE.md) - 开发环境设置、代码规范、调试技巧
+- [API参考](API_REFERENCE.md) - 完整的API文档和使用示例
 
 ## 依赖项
 
@@ -210,6 +230,10 @@ java -jar ai-infrastructure.jar YOUR_API_KEY_HERE
 - Lombok 1.18.26 (减少样板代码)
 - JUnit 5.9.2 (测试框架)
 - Mockito 5.1.1 (测试框架)
+
+## 变更日志
+
+查看 [CHANGELOG.md](CHANGELOG.md) 了解所有版本更新和详细变更。
 
 ## 未来改进方向
 

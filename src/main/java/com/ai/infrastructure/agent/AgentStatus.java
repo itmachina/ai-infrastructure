@@ -9,5 +9,6 @@ public enum AgentStatus {
     BUSY,        // 忙碌
     ERROR,       // 错误
     TERMINATED,  // 终止
-    ABORTED      // 中断
+    ABORTED,     // 中断
+    COMPLETED    // 完成
 }

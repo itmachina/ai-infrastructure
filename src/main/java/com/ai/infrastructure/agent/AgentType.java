@@ -6,6 +6,11 @@ package com.ai.infrastructure.agent;
  */
 public enum AgentType {
     /**
+     * 通用代理 - 处理各种通用任务
+     */
+    GENERAL("通用代理", "处理各种通用任务"),
+    
+    /**
      * I2A交互Agent - 负责用户交互和界面更新任务
      * 处理用户输入、界面更新、结果展示等交互性任务
      */
