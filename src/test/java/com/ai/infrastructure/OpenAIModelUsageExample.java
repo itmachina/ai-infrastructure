@@ -20,7 +20,7 @@ public class OpenAIModelUsageExample {
         
         // 设置OpenAI模型API密钥
         // 注意：在实际使用中，请从安全的配置源获取API密钥
-        String apiKey = "sk-aaf8a48e495e78388e4458f78565b9a2";
+        String apiKey = System.getenv("API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             // 尝试从命令行参数获取
             if (args.length > 0) {
@@ -37,21 +37,21 @@ public class OpenAIModelUsageExample {
         }
         
         // 示例1: 智能任务分发 - 让模型决定如何处理任务
-        demonstrateIntelligentTaskDispatch(application);
+//        demonstrateIntelligentTaskDispatch(application);
         
         // 示例2: 工具调用 - 模型决定调用特定工具
         demonstrateToolCalling(application);
         
         // 示例3: 子Agent创建 - 复杂任务的专门处理
-        demonstrateSubAgentCreation(application);
+//        demonstrateSubAgentCreation(application);
         
         // 示例4: 多轮对话和持续执行
-        demonstrateContinuousExecution(application);
+//        demonstrateContinuousExecution(application);
         
         // 示例5: 交互式模式
-        if (apiKey != null && !apiKey.isEmpty()) {
-            demonstrateInteractiveMode(application);
-        }
+//        if (apiKey != null && !apiKey.isEmpty()) {
+//            demonstrateInteractiveMode(application);
+//        }
         
         System.out.println("=== 示例完成 ===");
     }
@@ -90,18 +90,18 @@ public class OpenAIModelUsageExample {
             "搜索关于人工智能伦理的最新研究进展"
         );
         System.out.println("   任务1 - 本地搜索任务: " + task1.join());
-        
-        // 网页搜索任务（使用百度搜索）
-        CompletableFuture<String> task2 = application.executeTask(
-            "web_search 2025年最新的人工智能技术发展趋势"
-        );
-        System.out.println("   任务2 - 网页搜索任务: " + task2.join());
-        
-        // 计算任务
-        CompletableFuture<String> task3 = application.executeTask(
-            "计算2的10次方等于多少"
-        );
-        System.out.println("   任务3 - 计算任务: " + task3.join());
+//
+//        // 网页搜索任务（使用百度搜索）
+//        CompletableFuture<String> task2 = application.executeTask(
+//            "web_search 2025年最新的人工智能技术发展趋势"
+//        );
+//        System.out.println("   任务2 - 网页搜索任务: " + task2.join());
+//
+//        // 计算任务
+//        CompletableFuture<String> task3 = application.executeTask(
+//            "计算2的10次方等于多少"
+//        );
+//        System.out.println("   任务3 - 计算任务: " + task3.join());
         
         System.out.println();
     }
