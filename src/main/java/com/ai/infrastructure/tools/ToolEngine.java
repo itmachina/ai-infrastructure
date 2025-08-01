@@ -114,6 +114,75 @@ public class ToolEngine {
     }
     
     /**
+     * 使用参数执行工具 - 支持AI决策的参数化工具调用
+     * @param toolName 工具名称
+     * @param parameters 参数映射
+     * @return 执行结果
+     */
+    public String executeToolWithParameters(String toolName, Map<String, Object> parameters) {
+        logger.debug("Executing tool '{}' with parameters: {}", toolName, parameters);
+        
+        try {
+            // 检查工具是否已注册
+            if (!registeredTools.containsKey(toolName)) {
+                logger.error("Tool '{}' not found", toolName);
+                return "Error: Tool '" + toolName + "' not found";
+            }
+            
+            // 验证工具名称安全性
+            if (detectCommandInjection(toolName)) {
+                logger.error("Tool name contains potential command injection: {}", toolName);
+                return "Error: Invalid tool name";
+            }
+            
+            // 参数安全性验证
+            for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+                String paramName = entry.getKey();
+                Object paramValue = entry.getValue();
+                
+                if (paramValue instanceof String) {
+                    String paramStr = (String) paramValue;
+                    if (detectCommandInjection(paramStr)) {
+                        logger.error("Parameter '{}' contains potential command injection: {}", paramName, paramStr);
+                        return "Error: Invalid parameter value for '" + paramName + "'";
+                    }
+                }
+            }
+            
+            // 构建工具调用任务
+            String task = buildTaskFromParameters(toolName, parameters);
+            
+            // 执行工具
+            return executeTool(task);
+            
+        } catch (Exception e) {
+            logger.error("Error executing tool '{}' with parameters: {}", toolName, e.getMessage(), e);
+            return "Error executing tool: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * 根据参数构建任务描述
+     */
+    private String buildTaskFromParameters(String toolName, Map<String, Object> parameters) {
+        StringBuilder taskBuilder = new StringBuilder();
+        taskBuilder.append("Execute ").append(toolName);
+        
+        if (parameters != null && !parameters.isEmpty()) {
+            taskBuilder.append(" with parameters: ");
+            for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+                taskBuilder.append(entry.getKey()).append("=").append(entry.getValue()).append(", ");
+            }
+            // 移除最后的逗号和空格
+            if (taskBuilder.length() > 2) {
+                taskBuilder.setLength(taskBuilder.length() - 2);
+            }
+        }
+        
+        return taskBuilder.toString();
+    }
+    
+    /**
      * 基于Claude Code的工具执行增强实现 - 支持更安全的工具执行
      * @param task 任务描述
      * @param maxRetries 最大重试次数

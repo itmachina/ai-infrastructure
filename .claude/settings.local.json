@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(ls -la)",
@@ -99,7 +100,16 @@
       "Bash(mvn test -Dtest=AgentTest -q)",
       "Bash(mvn test-compile -q)",
       "Bash(mvn compile exec:java:*)",
-      "Bash(mvn test:*)"
+      "Bash(mvn test:*)",
+      "Bash(cp -r D:projectai-infrastructuresrcmainjavacomaiinfrastructureagent D:projectai-infrastructurearch_backupagent_old)",
+      "Bash(powershell -Command \"Copy-Item -Path ''D:\\project\\ai-infrastructure\\src\\main\\java\\com\\ai\\infrastructure\\agent'' -Destination ''D:\\project\\ai-infrastructure\\arch_backup\\agent_old'' -Recurse -Force\")",
+      "Bash(mvn clean compile -DskipTests)",
+      "Bash(mvn clean compile -DskipTests=true)",
+      "Bash(rg \"executeMainTask\" --type java -A 3)",
+      "Bash(rg \"public.*execute\" --type java -A 2 src/main/java/com/ai/infrastructure/tools/ToolEngine.java)",
+      "Bash(rg \"public.*String\" --type java src/main/java/com/ai/infrastructure/model/OpenAIModelClient.java)",
+      "Bash(rg \"public.*getAvailable\\|public.*list\" --type java src/main/java/com/ai/infrastructure/tools/ToolEngine.java)",
+      "Bash(rg \"registeredTools\\|get.*tool\\|list.*tool\" --type java src/main/java/com/ai/infrastructure/tools/ToolEngine.java)"
     ],
     "deny": []
   }

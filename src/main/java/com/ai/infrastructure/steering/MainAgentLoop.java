@@ -317,14 +317,10 @@ public class MainAgentLoop {
         }
         
         String finalResult;
-        if (toolResult != null) {
-            // 如果有工具执行结果，将其作为最终结果
-            finalResult = toolResult;
-        } else {
-            // 调用主Agent执行任务
-            CompletableFuture<String> resultFuture = mainAgent.executeTask(fullPrompt.toString());
-            finalResult = resultFuture.join();
-        }
+
+        // 调用主Agent执行任务
+        CompletableFuture<String> resultFuture = mainAgent.executeTask(fullPrompt.toString());
+        finalResult = resultFuture.join();
         
         // 更新内存管理
         memoryManager.updateContext(prompt, finalResult);

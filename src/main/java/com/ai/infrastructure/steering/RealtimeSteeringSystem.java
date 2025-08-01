@@ -45,6 +45,12 @@ public class RealtimeSteeringSystem implements AutoCloseable {
 
         // 启动消息解析器
         this.messageParser.startProcessing();
+        
+        // 启动消息处理器，监听解析器输出的用户消息
+        startMessageConsumer();
+        
+        // 启动输出处理器，监听StreamingProcessor的输出
+        startOutputConsumer();
     }
 
     /**
@@ -328,5 +334,111 @@ public class RealtimeSteeringSystem implements AutoCloseable {
      */
     public void removeQueuedCommands(List<Command> commandsToRemove) {
         processor.removeQueuedCommands(commandsToRemove);
+    }
+
+    /**
+     * 启动输出消费者 - 监听StreamingProcessor的输出
+     */
+    private void startOutputConsumer() {
+        Thread outputThread = new Thread(() -> {
+            logger.info("Starting output consumer thread");
+            
+            try {
+                while (!isClosed.get()) {
+                    // 从StreamingProcessor的输出队列读取结果
+                    CompletableFuture<QueueMessage<Object>> readFuture = processor.getOutputStream().read();
+                    try {
+                        QueueMessage<Object> message = readFuture.get(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        
+                        if (message.isDone()) {
+                            // 处理器完成，退出循环
+                            logger.info("Output queue completed");
+                            break;
+                        }
+                        
+                        Object value = message.getValue();
+                        if (value != null) {
+                            // 处理输出结果
+                            logger.info("Processing output: {}", value);
+                            
+                            // 如果是StreamingResult，显示结果内容
+                            if (value instanceof StreamingResult) {
+                                StreamingResult result = (StreamingResult) value;
+                                System.out.println("[AI] " + result.getContent());
+                            } else {
+                                System.out.println("[OUTPUT] " + value);
+                            }
+                        }
+                        
+                    } catch (java.util.concurrent.TimeoutException e) {
+                        // 超时是正常的，继续循环
+                        continue;
+                    } catch (Exception e) {
+                        if (!isClosed.get()) {
+                            logger.error("Error in output consumer: {}", e.getMessage(), e);
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                if (!isClosed.get()) {
+                    logger.error("Output consumer thread error: {}", e.getMessage(), e);
+                }
+            } finally {
+                logger.info("Output consumer thread stopped");
+            }
+        });
+        
+        outputThread.setDaemon(true);
+        outputThread.start();
+    }
+
+    /**
+     * 启动消息消费者 - 监听解析器输出并处理用户消息
+     */
+    private void startMessageConsumer() {
+        Thread consumerThread = new Thread(() -> {
+            logger.info("Starting message consumer thread");
+            
+            try {
+                while (!isClosed.get()) {
+                    // 从解析器的输出队列读取用户消息
+                    CompletableFuture<QueueMessage<UserMessage>> readFuture = messageParser.getOutputStream().read();
+                    try {
+                        QueueMessage<UserMessage> message = readFuture.get(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        logger.info("get message from outputstream:{}", message);
+                        if (message.isDone()) {
+                            // 解析器完成，退出循环
+                            break;
+                        }
+                        
+                        UserMessage userMessage = message.getValue();
+                        if (userMessage != null) {
+                            // 处理用户消息
+                            logger.info("Processing user message: {}", userMessage);
+                            processInput(userMessage);
+                        }
+                        
+                    } catch (java.util.concurrent.TimeoutException e) {
+                        // 超时是正常的，继续循环
+                        continue;
+                    } catch (Exception e) {
+                        if (!isClosed.get()) {
+                            logger.error("Error in message consumer: {}", e.getMessage(), e);
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                if (!isClosed.get()) {
+                    logger.error("Message consumer thread error: {}", e.getMessage(), e);
+                }
+            } finally {
+                logger.info("Message consumer thread stopped");
+            }
+        });
+        
+        consumerThread.setDaemon(true);
+        consumerThread.start();
     }
 }

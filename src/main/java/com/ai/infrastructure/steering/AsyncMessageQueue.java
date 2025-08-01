@@ -9,11 +9,10 @@ import java.util.NoSuchElementException;
 
 /**
  * 异步消息队列 - 支持实时消息入队和非阻塞读取
- * 基于Claude Code的h2A类实现，完整实现AsyncIterator接口
+ * 简化实现，移除未使用的pendingReads机制
  */
 public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMessage<T>>> {
     private final Queue<T> messageQueue;
-    private final Queue<CompletableFuture<QueueMessage<T>>> pendingReads;
     private final AtomicBoolean isCompleted;
     private final AtomicBoolean hasError;
     private volatile Exception errorState;
@@ -26,7 +25,6 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
     
     public AsyncMessageQueue(Runnable cleanupCallback) {
         this.messageQueue = new ConcurrentLinkedQueue<>();
-        this.pendingReads = new ConcurrentLinkedQueue<>();
         this.isCompleted = new AtomicBoolean(false);
         this.hasError = new AtomicBoolean(false);
         this.hasStarted = new AtomicBoolean(false);
@@ -60,19 +58,12 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
      * @param message 消息
      */
     public void enqueue(T message) {
-        if (isCompleted.get() || hasError.get()) {
+        if (isCompleted.get()) {
             return;
         }
         
-        // 检查是否有等待的读取
-        CompletableFuture<QueueMessage<T>> pendingRead = pendingReads.poll();
-        if (pendingRead != null) {
-            // 有等待的读取，直接返回消息
-            pendingRead.complete(new QueueMessage<>(false, message));
-        } else {
-            // 推入队列缓冲
-            messageQueue.offer(message);
-        }
+        // 即使有错误状态，仍然允许入队，因为错误只影响当前读取任务
+        messageQueue.offer(message);
     }
     
     /**
@@ -91,16 +82,17 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
             return CompletableFuture.completedFuture(new QueueMessage<>(true, null));
         }
         
-        // 有错误状态
+        // 有错误状态 - 只对当前读操作抛出异常，然后清除错误状态
         if (hasError.get()) {
             CompletableFuture<QueueMessage<T>> future = new CompletableFuture<>();
-            future.completeExceptionally(errorState);
+            Exception currentError = errorState;
+            clearError(); // 清除错误状态，不影响后续操作
+            future.completeExceptionally(currentError);
             return future;
         }
         
-        // 等待新消息 - 关键的非阻塞机制
+        // 队列为空且未完成，返回空的future
         CompletableFuture<QueueMessage<T>> future = new CompletableFuture<>();
-        pendingReads.offer(future);
         return future;
     }
     
@@ -109,27 +101,17 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
      */
     public void complete() {
         if (isCompleted.compareAndSet(false, true)) {
-            // 完成所有等待的读取
-            CompletableFuture<QueueMessage<T>> pendingRead;
-            while ((pendingRead = pendingReads.poll()) != null) {
-                pendingRead.complete(new QueueMessage<>(true, null));
-            }
+            // 标记完成，不再接受新消息
         }
     }
     
     /**
-     * 设置错误状态
+     * 设置错误状态 - 只影响下一次读取操作
      * @param error 错误
      */
     public void error(Exception error) {
-        if (hasError.compareAndSet(false, true)) {
-            this.errorState = error;
-            // 拒绝所有等待的读取
-            CompletableFuture<QueueMessage<T>> pendingRead;
-            while ((pendingRead = pendingReads.poll()) != null) {
-                pendingRead.completeExceptionally(error);
-            }
-        }
+        this.errorState = error;
+        this.hasError.set(true);
     }
     
     /**
@@ -149,6 +131,14 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
     }
     
     /**
+     * 清除错误状态 - 允许队列从错误中恢复
+     */
+    public void clearError() {
+        this.hasError.set(false);
+        this.errorState = null;
+    }
+    
+    /**
      * 检查是否已启动（用于Iterator接口）
      * @return boolean
      */
@@ -164,7 +154,6 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
             cleanupCallback.run();
         }
         messageQueue.clear();
-        pendingReads.clear();
     }
     
     /**
@@ -180,6 +169,6 @@ public class AsyncMessageQueue<T> implements Iterator<CompletableFuture<QueueMes
      * @return boolean
      */
     public boolean isEmpty() {
-        return messageQueue.isEmpty() && pendingReads.isEmpty();
+        return messageQueue.isEmpty();
     }
 }
