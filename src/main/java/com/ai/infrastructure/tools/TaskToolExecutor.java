@@ -1,10 +1,7 @@
 package com.ai.infrastructure.tools;
 
-import com.ai.infrastructure.agent.AgentStatus;
-import com.ai.infrastructure.agent.MainAgent;
 import com.ai.infrastructure.agent.SubAgent;
 import com.ai.infrastructure.memory.MemoryManager;
-import com.ai.infrastructure.model.OpenAIModelClient;
 import com.ai.infrastructure.security.SecurityManager;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -15,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Task工具执行器 - 基于Claude Code的Task工具实现分层多Agent架构

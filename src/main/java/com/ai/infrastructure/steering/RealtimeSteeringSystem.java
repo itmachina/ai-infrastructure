@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,10 +31,11 @@ public class RealtimeSteeringSystem implements AutoCloseable {
     private final ToolEngine toolEngine;
     private final AtomicBoolean isClosed;
     private final AtomicBoolean isProcessing;
+    private final AtomicBoolean isAgentLoopActive;
     
-    public RealtimeSteeringSystem() {
+    public RealtimeSteeringSystem(String apiKey) {
         this.inputQueue = new AsyncMessageQueue<>();
-        this.mainAgent = new MainAgent("steering-main", "Realtime Steering Main Agent");
+        this.mainAgent = new MainAgent("steering-main", "Realtime Steering Main Agent", apiKey);
         this.memoryManager = new MemoryManager();
         this.toolEngine = new ToolEngine();
         
@@ -42,6 +44,7 @@ public class RealtimeSteeringSystem implements AutoCloseable {
         this.agentLoop = new MainAgentLoop(mainAgent, memoryManager, toolEngine);
         this.isClosed = new AtomicBoolean(false);
         this.isProcessing = new AtomicBoolean(false);
+        this.isAgentLoopActive = new AtomicBoolean(false);
         
         // 启动消息解析器
         this.messageParser.startProcessing();
@@ -173,6 +176,9 @@ public class RealtimeSteeringSystem implements AutoCloseable {
         if (!isClosed.get()) {
             logger.info("Realtime Steering System started");
             logger.info("Ready for real-time interaction...");
+            
+            // 启动mainAgentLoop
+            startMainAgentLoop();
         }
     }
     
@@ -183,6 +189,9 @@ public class RealtimeSteeringSystem implements AutoCloseable {
     public void close() {
         if (isClosed.compareAndSet(false, true)) {
             try {
+                // 停止mainAgentLoop
+                stopMainAgentLoop();
+                
                 messageParser.close();
                 processor.close();
                 inputQueue.cleanup();
@@ -215,8 +224,81 @@ public class RealtimeSteeringSystem implements AutoCloseable {
      * @return String
      */
     public String getStatusInfo() {
-        return String.format("RealtimeSteeringSystem{closed=%b, processing=%b}", 
-            isClosed.get(), isProcessing.get());
+        return String.format("RealtimeSteeringSystem{closed=%b, processing=%b, agentLoopActive=%b}", 
+            isClosed.get(), isProcessing.get(), isAgentLoopActive.get());
+    }
+    
+    /**
+     * 启动主Agent循环
+     */
+    private void startMainAgentLoop() {
+        logger.info("Starting MainAgentLoop");
+        
+        // 在新的线程中启动主Agent循环
+        Thread agentLoopThread = new Thread(() -> {
+            try {
+                // 创建初始消息列表
+                List<Object> initialMessages = new ArrayList<>();
+                
+                // 启动主Agent循环，等待输入
+                while (!isClosed.get()) {
+                    // 这里可以添加循环逻辑，定期检查输入队列
+                    // 目前简化处理，只是保持线程运行
+                    Thread.sleep(1000);
+                    
+                    // 检查是否有待处理的命令
+                    List<Command> queuedCommands = processor.getQueuedCommandsSupplier().get();
+                    if (!queuedCommands.isEmpty() && !isProcessing.get()) {
+                        isProcessing.set(true);
+                        logger.debug("Processing {} queued commands", queuedCommands.size());
+                        
+                        // 处理队列中的命令
+                        for (Command command : queuedCommands) {
+                            if (isClosed.get()) break;
+                            
+                            try {
+                                // 使用MainAgentLoop处理命令
+                                List<Object> messages = new ArrayList<>();
+                                messages.add("Command: " + command.getMode() + " - " + command.getValue());
+                                
+                                CompletableFuture<StreamingResult> resultFuture = agentLoop.executeLoop(
+                                    messages, command.getValue());
+                                
+                                StreamingResult result = resultFuture.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                                logger.debug("Command processed: {}", result.getType());
+                            } catch (Exception e) {
+                                logger.error("Error processing command: {}", e.getMessage(), e);
+                            }
+                        }
+                        
+                        // 清理已处理的命令
+                        processor.removeQueuedCommands(queuedCommands);
+                        isProcessing.set(false);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Error in MainAgentLoop: {}", e.getMessage(), e);
+            } finally {
+                isAgentLoopActive.set(false);
+                logger.info("MainAgentLoop stopped");
+            }
+        });
+        
+        agentLoopThread.setDaemon(true);
+        agentLoopThread.start();
+        isAgentLoopActive.set(true);
+        logger.info("MainAgentLoop started in background thread");
+    }
+    
+    /**
+     * 停止主Agent循环
+     */
+    private void stopMainAgentLoop() {
+        logger.info("Stopping MainAgentLoop");
+        if (agentLoop != null) {
+            agentLoop.abort();
+        }
+        isAgentLoopActive.set(false);
     }
     
     /**

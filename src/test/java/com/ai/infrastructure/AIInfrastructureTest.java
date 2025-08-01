@@ -5,9 +5,9 @@ import com.ai.infrastructure.memory.MemoryManager;
 import com.ai.infrastructure.scheduler.TaskScheduler;
 import com.ai.infrastructure.security.SecurityManager;
 import com.ai.infrastructure.tools.ToolEngine;
-
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -20,7 +20,7 @@ public class AIInfrastructureTest {
     @DisplayName("测试组件初始化")
     public void testComponentInitialization() {
         assertDoesNotThrow(() -> {
-            MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+            MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
             MemoryManager memoryManager = new MemoryManager();
             TaskScheduler taskScheduler = new TaskScheduler(5);
             SecurityManager securityManager = new SecurityManager();

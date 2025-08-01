@@ -15,14 +15,12 @@ public class OpenAIModelIntegrationTest {
     
     @BeforeEach
     void setUp() {
-        mainAgent = new MainAgent("test-main-agent", "Test Main Agent");
+        mainAgent = new MainAgent("test-main-agent", "Test Main Agent", System.getenv("AI_API_KEY"));
     }
     
     @Test
     @Disabled("需要有效的API密钥才能运行此测试")
     void testAgentTaskExecutionWithModel() {
-        // 设置API密钥（需要替换为实际的密钥）
-        mainAgent.setOpenAIModelApiKey("YOUR_API_KEY_HERE");
         
         // 测试Agent任务执行
         String result = mainAgent.executeTask("请用一句话介绍人工智能").join();

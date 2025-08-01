@@ -158,7 +158,7 @@ public class AsyncMessageQueueIntegrationTest {
     private static void testRealtimeSteering() {
         System.out.println("\n--- Test 5: Realtime Steering System ---");
         
-        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem()) {
+        try (RealtimeSteeringSystem system = new RealtimeSteeringSystem(System.getenv("AI_API_KEY"))) {
             system.start();
             
             // 发送一些输入

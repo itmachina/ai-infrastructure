@@ -21,7 +21,7 @@ public class EnhancedStreamingProcessorTest {
         System.out.println("Starting testPromptCommandProcessing...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -58,7 +58,7 @@ public class EnhancedStreamingProcessorTest {
         System.out.println("Starting testToolCommandProcessing...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -96,7 +96,7 @@ public class EnhancedStreamingProcessorTest {
         System.out.println("Starting testSystemCommandProcessing...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         
@@ -153,7 +153,7 @@ public class EnhancedStreamingProcessorTest {
         System.out.println("Starting testUnsupportedCommandProcessing...");
         
         // 创建必要的组件
-        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent");
+        MainAgent mainAgent = new MainAgent("test-main", "Test Main Agent", System.getenv("AI_API_KEY"));
         ToolEngine toolEngine = new ToolEngine();
         MemoryManager memoryManager = new MemoryManager();
         

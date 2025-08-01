@@ -88,7 +88,7 @@ public class IntelligentAllocationTest {
                     logger.info("✅ 智能分配选择Agent: {}", selectedAgent.getAgentId());
                     logger.info("   Agent类型: {}", selectedAgent.getAgentType().getDisplayName());
                     logger.info("   Agent状态: {}", selectedAgent.getStatus());
-                    logger.info("   完成率: {:.1f}%", selectedAgent.getCompletionRate() * 100);
+                    logger.info("   完成率: {}", String.format("%.1f%%", selectedAgent.getCompletionRate() * 100));
                 } else {
                     logger.warn("❌ 智能分配失败");
                 }
