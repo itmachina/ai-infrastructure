@@ -1,6 +1,5 @@
 package com.ai.infrastructure.conversation;
 
-import com.ai.infrastructure.agent.SubAgent;
 import com.ai.infrastructure.model.OpenAIModelClient;
 import com.ai.infrastructure.tools.ToolEngine;
 import org.slf4j.Logger;
@@ -129,9 +128,8 @@ public class ContinuousExecutionManager {
             } else if (processedResponse.startsWith("SUBAGENT:")) {
                 // 需要创建子Agent并执行任务
                 String subagentTask = processedResponse.substring(9); // 移除"SUBAGENT:"前缀
-                logger.info("SUBAGENT, nextStep:{}", subagentTask);
-                // 创建子Agent并执行任务
-                return executeSubAgentTask(subagentTask);
+                logger.warn("SubAgent functionality is deprecated and will be ignored.");
+                return executeTaskStep("SubAgent creation was requested but is no longer supported. Continuing with task: " + subagentTask);
             } else if (processedResponse.startsWith("COMPLETE:")) {
                 // 任务完成
                 String result = processedResponse.substring(9); // 移除"COMPLETE:"前缀
@@ -147,27 +145,6 @@ public class ContinuousExecutionManager {
         } catch (Exception e) {
             isExecuting.set(false);
             return "Error executing task step: " + e.getMessage();
-        }
-    }
-    
-    /**
-     * 执行子Agent任务
-     * @param task 任务描述
-     * @return 执行结果
-     */
-    private String executeSubAgentTask(String task) {
-        try {
-            // 创建子Agent并执行任务
-            SubAgent subAgent = new SubAgent("sub-" + System.currentTimeMillis(), "SubAgent for: " + task);
-            String result = subAgent.executeTask(task).join();
-            
-            // 添加子Agent执行结果到历史记录
-            conversationManager.addMessageToHistory("subagent_result", result);
-            
-            // 继续执行任务
-            return executeTaskStep("基于子Agent执行结果继续任务: " + result);
-        } catch (Exception e) {
-            return "Error executing subagent task: " + e.getMessage();
         }
     }
     

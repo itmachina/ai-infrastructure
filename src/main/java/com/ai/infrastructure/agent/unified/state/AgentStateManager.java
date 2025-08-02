@@ -2,7 +2,7 @@ package com.ai.infrastructure.agent.unified.state;
 
 import com.ai.infrastructure.agent.AgentStatus;
 import com.ai.infrastructure.agent.AgentType;
-import com.ai.infrastructure.agent.unified.UnifiedAgent;
+import com.ai.infrastructure.agent.unified.BaseUnifiedAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +18,7 @@ public class AgentStateManager {
     private static final Logger logger = LoggerFactory.getLogger(AgentStateManager.class);
     
     // 状态数据
-    private final UnifiedAgent agent;
+    private final BaseUnifiedAgent agent;
     private volatile AgentStatus currentStatus;
     private volatile long lastStatusChangeTime;
     private volatile String currentTask;
@@ -29,7 +29,7 @@ public class AgentStateManager {
     private final Map<String, Object> stateAttributes;
     private final AtomicLong statusChangeCount;
     
-    public AgentStateManager(UnifiedAgent agent) {
+    public AgentStateManager(BaseUnifiedAgent agent) {
         this.agent = agent;
         this.currentStatus = AgentStatus.IDLE;
         this.lastStatusChangeTime = System.currentTimeMillis();

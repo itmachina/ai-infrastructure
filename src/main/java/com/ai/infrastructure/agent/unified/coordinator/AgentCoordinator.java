@@ -1,10 +1,8 @@
 package com.ai.infrastructure.agent.unified.coordinator;
 
 import com.ai.infrastructure.agent.AgentStatus;
-import com.ai.infrastructure.agent.AgentType;
-import com.ai.infrastructure.agent.unified.UnifiedAgent;
+import com.ai.infrastructure.agent.unified.BaseUnifiedAgent;
 import com.ai.infrastructure.agent.unified.UnifiedAgentContext;
-import com.ai.infrastructure.agent.unified.state.AgentStateManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +29,7 @@ public class AgentCoordinator {
     private final ExecutorService coordinationExecutor;
     
     // Agent注册表
-    private final Map<String, UnifiedAgent> registeredAgents;
+    private final Map<String, BaseUnifiedAgent> registeredAgents;
     private final Map<String, List<String>> collaborationGroups;
     private final Map<String, AgentLoadInfo> agentLoadInfo;
     
@@ -79,7 +77,7 @@ public class AgentCoordinator {
     /**
      * 注册Agent
      */
-    public boolean registerAgent(UnifiedAgent agent) {
+    public boolean registerAgent(BaseUnifiedAgent agent) {
         if (agent == null || agent.getAgentId() == null) {
             logger.error("Invalid agent provided for registration");
             return false;
@@ -103,7 +101,7 @@ public class AgentCoordinator {
      * 注销Agent
      */
     public boolean unregisterAgent(String agentId) {
-        UnifiedAgent agent = registeredAgents.remove(agentId);
+        BaseUnifiedAgent agent = registeredAgents.remove(agentId);
         if (agent != null) {
             agentLoadInfo.remove(agentId);
             
@@ -183,7 +181,7 @@ public class AgentCoordinator {
      */
     private boolean validateCollaborationParticipants(String initiatorAgentId, String[] partnerAgentIds) {
         // 检查发起者
-        UnifiedAgent initiator = registeredAgents.get(initiatorAgentId);
+        BaseUnifiedAgent initiator = registeredAgents.get(initiatorAgentId);
         if (initiator == null) {
             logger.error("Initiator agent not found: {}", initiatorAgentId);
             return false;
@@ -199,7 +197,7 @@ public class AgentCoordinator {
         
         // 检查所有参与者
         for (String partnerId : partnerAgentIds) {
-            UnifiedAgent partner = registeredAgents.get(partnerId);
+            BaseUnifiedAgent partner = registeredAgents.get(partnerId);
             if (partner == null) {
                 logger.error("Partner agent not found: {}", partnerId);
                 return false;
@@ -373,7 +371,7 @@ public class AgentCoordinator {
     /**
      * 获取注册的Agents
      */
-    public Map<String, UnifiedAgent> getRegisteredAgents() {
+    public Map<String, BaseUnifiedAgent> getRegisteredAgents() {
         return new ConcurrentHashMap<>(registeredAgents);
     }
     
@@ -417,14 +415,14 @@ public class AgentCoordinator {
      * Agent负载信息
      */
     public static class AgentLoadInfo {
-        private final UnifiedAgent agent;
+        private final BaseUnifiedAgent agent;
         private double currentLoad;
         private int totalTasks;
         private int completedTasks;
         private int failedTasks;
         private long lastUpdate;
         
-        public AgentLoadInfo(UnifiedAgent agent) {
+        public AgentLoadInfo(BaseUnifiedAgent agent) {
             this.agent = agent;
             this.currentLoad = 0.0;
             this.totalTasks = 0;

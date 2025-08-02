@@ -187,12 +187,6 @@ public class SecurityManager {
             return true;
         }
         
-        if (command.contains("`") && command.lastIndexOf("`") > command.indexOf("`")) {
-            logSecurityEvent("command_injection_detected", 
-                "Backtick command substitution detected");
-            return true;
-        }
-        
         // 检查命令链接模式
         if (command.contains("&&") || command.contains("||") || 
             command.contains(";") || command.contains("|")) {

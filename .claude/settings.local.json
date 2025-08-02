@@ -109,7 +109,9 @@
       "Bash(rg \"public.*execute\" --type java -A 2 src/main/java/com/ai/infrastructure/tools/ToolEngine.java)",
       "Bash(rg \"public.*String\" --type java src/main/java/com/ai/infrastructure/model/OpenAIModelClient.java)",
       "Bash(rg \"public.*getAvailable\\|public.*list\" --type java src/main/java/com/ai/infrastructure/tools/ToolEngine.java)",
-      "Bash(rg \"registeredTools\\|get.*tool\\|list.*tool\" --type java src/main/java/com/ai/infrastructure/tools/ToolEngine.java)"
+      "Bash(rg \"registeredTools\\|get.*tool\\|list.*tool\" --type java src/main/java/com/ai/infrastructure/tools/ToolEngine.java)",
+      "Bash(rg \"factual/multidimensional/comparative\" --type java -A 3)",
+      "Bash(rg \"factual/multidimensional/comparative\" --type java -B 2 -A 2)"
     ],
     "deny": []
   }

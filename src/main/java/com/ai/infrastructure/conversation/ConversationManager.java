@@ -2,7 +2,7 @@ package com.ai.infrastructure.conversation;
 
 import com.ai.infrastructure.tools.ToolEngine;
 import com.ai.infrastructure.model.OpenAIModelClient;
-import com.ai.infrastructure.agent.SubAgent;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -217,8 +217,7 @@ public class ConversationManager {
      * @return 系统消息
      */
     public String getSystemMessage() {
-        return "You are Claude Code, Anthropic's official CLI for Claude. " +
-               "You are an interactive CLI tool that helps users with software engineering tasks. " +
+        return "You are an interactive tool that helps users with any tasks. " +
                "IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously. " +
                "Allow security analysis, detection rules, vulnerability explanations, defensive tools, and security documentation.\n\n" +
                "You are a highly intelligent AI assistant designed to help users complete tasks by intelligently using various tools and services. " +

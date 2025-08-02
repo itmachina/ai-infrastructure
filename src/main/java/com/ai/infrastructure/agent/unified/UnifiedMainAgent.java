@@ -1,6 +1,10 @@
 package com.ai.infrastructure.agent.unified;
 
 import com.ai.infrastructure.agent.AgentType;
+import com.ai.infrastructure.agent.unified.concrete.GeneralAgent;
+import com.ai.infrastructure.agent.unified.concrete.I2AAgent;
+import com.ai.infrastructure.agent.unified.concrete.KN5Agent;
+import com.ai.infrastructure.agent.unified.concrete.UH1Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +26,7 @@ public class UnifiedMainAgent {
     private final String agentId;
     private final String name;
     private final UnifiedAgentContext context;
-    private final Map<String, UnifiedAgent> managedAgents;
+    private final Map<String, BaseUnifiedAgent> managedAgents;
     
     // 系统性能监控
     private long startTime;
@@ -50,32 +54,38 @@ public class UnifiedMainAgent {
      */
     private void initializeDefaultAgents() {
         // 创建系统默认的Agent
-        createDefaultAgent("i2a_agent", "I2A交互Agent", AgentType.I2A);
-        createDefaultAgent("uh1_agent", "UH1用户处理Agent", AgentType.UH1);
-        createDefaultAgent("kn5_agent", "KN5知识处理Agent", AgentType.KN5);
-        createDefaultAgent("general_agent", "通用Agent", AgentType.GENERAL);
+        createAgent("i2a_agent", "I2A交互Agent", AgentType.I2A);
+        createAgent("uh1_agent", "UH1用户处理Agent", AgentType.UH1);
+        createAgent("kn5_agent", "KN5知识处理Agent", AgentType.KN5);
+        createAgent("general_agent", "通用Agent", AgentType.GENERAL);
     }
     
     /**
-     * 创建系统默认Agent
+     * 创建新的专用Agent (工厂方法)
      */
-    private void createDefaultAgent(String id, String name, AgentType type) {
-        UnifiedAgent agent = new UnifiedAgent(id, name, type, context);
-        managedAgents.put(id, agent);
-        context.getCoordinator().registerAgent(agent);
-        logger.debug("Created default agent: {} ({})", id, type);
-    }
-    
-    /**
-     * 创建新的专用Agent
-     */
-    public UnifiedAgent createAgent(String agentId, String name, AgentType agentType) {
+    public BaseUnifiedAgent createAgent(String agentId, String name, AgentType agentType) {
         if (managedAgents.containsKey(agentId)) {
             logger.warn("Agent already exists: {}", agentId);
             return managedAgents.get(agentId);
         }
         
-        UnifiedAgent agent = new UnifiedAgent(agentId, name, agentType, context);
+        BaseUnifiedAgent agent;
+        switch (agentType) {
+            case I2A:
+                agent = new I2AAgent(agentId, name, context);
+                break;
+            case UH1:
+                agent = new UH1Agent(agentId, name, context);
+                break;
+            case KN5:
+                agent = new KN5Agent(agentId, name, context);
+                break;
+            case GENERAL:
+            default:
+                agent = new GeneralAgent(agentId, name, context);
+                break;
+        }
+        
         managedAgents.put(agentId, agent);
         context.getCoordinator().registerAgent(agent);
         
@@ -87,7 +97,7 @@ public class UnifiedMainAgent {
      * 移除Agent
      */
     public boolean removeAgent(String agentId) {
-        UnifiedAgent removed = managedAgents.remove(agentId);
+        BaseUnifiedAgent removed = managedAgents.remove(agentId);
         if (removed != null) {
             context.getCoordinator().unregisterAgent(agentId);
             logger.info("Removed agent: {}", agentId);
@@ -126,7 +136,7 @@ public class UnifiedMainAgent {
         TaskAnalysis analysis = analyzeTask(task);
         
         // 步骤2: 智能选择最佳Agent
-        UnifiedAgent selectedAgent = selectOptimalAgent(analysis, task);
+        BaseUnifiedAgent selectedAgent = selectOptimalAgent(analysis, task);
         
         if (selectedAgent == null) {
             // 回退选择: 使用通用Agent
@@ -192,16 +202,16 @@ public class UnifiedMainAgent {
     /**
      * 选择最佳Agent
      */
-    private UnifiedAgent selectOptimalAgent(TaskAnalysis analysis, String task) {
+    private BaseUnifiedAgent selectOptimalAgent(TaskAnalysis analysis, String task) {
         try {
-            List<UnifiedAgent> suitableAgents = managedAgents.values().stream()
+            List<BaseUnifiedAgent> suitableAgents = managedAgents.values().stream()
                 .filter(agent -> agent.getAgentType() == analysis.preferredAgentType)
-                .filter(UnifiedAgent::canAcceptTask)
+                .filter(BaseUnifiedAgent::canAcceptTask)
                 .collect(Collectors.toList());
             
             if (suitableAgents.isEmpty()) {
                 suitableAgents = managedAgents.values().stream()
-                    .filter(UnifiedAgent::canAcceptTask)
+                    .filter(BaseUnifiedAgent::canAcceptTask)
                     .collect(Collectors.toList());
             }
             
@@ -221,7 +231,7 @@ public class UnifiedMainAgent {
      */
     private String createNewAgentForTask(TaskAnalysis analysis, String task) {
         String newAgentId = "agent_" + System.currentTimeMillis();
-        UnifiedAgent newAgent = createAgent(newAgentId, "自动创建Agent", analysis.preferredAgentType);
+        BaseUnifiedAgent newAgent = createAgent(newAgentId, "自动创建Agent", analysis.preferredAgentType);
         
         return newAgent.executeTask(task).join();
     }
