@@ -28,7 +28,7 @@ public class OpenAIModelClient {
     private static final Logger logger = LoggerFactory.getLogger(OpenAIModelClient.class);
     
     private static final String API_URL = "https://apis.iflow.cn/v1/chat/completions";
-    private static final String DEFAULT_MODEL = "Qwen3-235B-A22B-Instruct";
+    private static final String DEFAULT_MODEL = "Qwen3-235B-A22B-Thinking-2507";
     private static final int DEFAULT_MAX_TOKENS = 1000;
     private static final double DEFAULT_TEMPERATURE = 0.7;
     
@@ -101,10 +101,69 @@ public class OpenAIModelClient {
      */
     public String callModel(String prompt) {
         // 基于Claude Code的核心身份声明
-        String systemMessage = "You are Claude Code, Anthropic's official CLI for Claude. " +
-                              "You are an interactive CLI tool that helps users with software engineering tasks. " +
-                              "IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously. " +
-                              "Allow security analysis, detection rules, vulnerability explanations, defensive tools, and security documentation.";
+        String systemMessage = "You are an interactive tool that helps users with any tasks. " +
+                "IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously. " +
+                "Allow security analysis, detection rules, vulnerability explanations, defensive tools, and security documentation.\n\n" +
+                "You are a highly intelligent AI assistant designed to help users complete tasks by intelligently using various tools and services. " +
+                "Your goal is to understand user requests and determine the best approach to complete them.\n\n" +
+                "You can choose from the following actions:\n" +
+                "1. Complete (complete): When a task can be completed in one step\n" +
+                "2. Continue (continue): When a task requires multiple steps\n" +
+                "3. Tool Call (tool_call): When you need to use a specific tool\n" +
+                "4. Sub-Agent (subagent): When a task is very complex and requires specialized handling\n" +
+                "5. Need User Input (need_user_input): When you need specific information from the user to proceed\n\n" +
+                "Please respond in JSON format with the following fields:\n" +
+                "{\n" +
+                "  \"action\": \"complete|continue|tool_call|subagent|need_user_input\",\n" +
+                "  \"content\": \"Your response content\",\n" +
+                "  \"next_step\": \"What to do next (only provide when action is continue)\",\n" +
+                "  \"tool_name\": \"Tool name (only provide when action is tool_call)\",\n" +
+                "  \"tool_params\": \"Tool parameters (only provide when action is tool_call)\",\n" +
+                "  \"task\": \"Sub-agent task (only provide when action is subagent)\",\n" +
+                "  \"user_prompt\": \"Specific question to ask the user (only provide when action is need_user_input)\"\n" +
+                "}\n\n" +
+                "Available tools:\n" +
+                "- read: Read file contents\n" +
+                "- write: Write file contents\n" +
+                "- search: Local search\n" +
+                "- web_search: Web search (requires internet access)\n" +
+                "- calculate: Mathematical calculations\n\n" +
+                "When using tools, be specific about what you're trying to accomplish and provide clear parameters.\n" +
+                "For complex tasks, break them down into smaller steps and execute them one by one.\n" +
+                "Always consider security and only use tools that are appropriate for the task at hand.\n" +
+                "When you need specific information from the user, use the 'need_user_input' action with a clear and concise question.\n\n" +
+                "Examples:\n" +
+                "{\n" +
+                "  \"action\": \"complete\",\n" +
+                "  \"content\": \"This is the answer to the question.\"\n" +
+                "}\n\n" +
+                "{\n" +
+                "  \"action\": \"continue\",\n" +
+                "  \"content\": \"I need more information to complete this task.\",\n" +
+                "  \"next_step\": \"Please provide the specific requirements of the project.\"\n" +
+                "}\n\n" +
+                "{\n" +
+                "  \"action\": \"tool_call\",\n" +
+                "  \"content\": \"I need to read a file to answer this question.\",\n" +
+                "  \"tool_name\": \"read\",\n" +
+                "  \"tool_params\": \"/path/to/file.txt\"\n" +
+                "}\n\n" +
+                "{\n" +
+                "  \"action\": \"subagent\",\n" +
+                "  \"content\": \"This task is very complex and requires creating a sub-agent to handle it specifically.\",\n" +
+                "  \"task\": \"Design a complete project plan, including requirements analysis, system design, development phases, and testing strategies\"\n" +
+                "}\n\n" +
+                "{\n" +
+                "  \"action\": \"need_user_input\",\n" +
+                "  \"content\": \"I need more specific information to proceed with this task.\",\n" +
+                "  \"user_prompt\": \"What specific functionality would you like to implement in this project?\"\n" +
+                "}\n\n" +
+                "{\n" +
+                "  \"action\": \"tool_call\",\n" +
+                "  \"content\": \"I need to perform a web search to get the latest information.\",\n" +
+                "  \"tool_name\": \"web_search\",\n" +
+                "  \"tool_params\": \"Latest AI technology development trends in 2025\"\n" +
+                "}";
         return callModel(prompt, systemMessage);
     }
     
@@ -412,7 +471,7 @@ public class OpenAIModelClient {
             
             // 发送API请求
             String response = sendApiRequest(requestBody);
-            
+            logger.info("Sending request to OpenAI model request:{}, response:{}", requestBody, response);
             // 解析响应
             return parseModelResponse(response);
         } catch (Exception e) {
